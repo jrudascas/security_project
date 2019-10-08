@@ -9,3 +9,6 @@ security_venv/
 
 # Ignore checkpoints
 */.ipynb_checkpoints
+
+# Ignore figure folder
+profiles/figuras_nuse/
