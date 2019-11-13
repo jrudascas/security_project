@@ -10,5 +10,8 @@ security_venv/
 # Ignore checkpoints
 */.ipynb_checkpoints
 
-# Ignore figure folder
+# Ignore aditional folders and files
 profiles/figuras_nuse/
+datasets
+plty_token.txt
+.DS_Store
