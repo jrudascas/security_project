@@ -15,4 +15,7 @@ profiles/figuras_nuse/
 datasets
 assets
 plty_token.txt
+periodicity_experiments/predictability
+example_scripts
+user8.pem
 .DS_Store
