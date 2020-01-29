@@ -11,7 +11,7 @@ security_venv/
 */.ipynb_checkpoints
 
 # Ignore aditional folders and files
-profiles/figuras_nuse/
+profiles/nuse/figuras_nuse/
 datasets
 assets
 plty_token.txt
