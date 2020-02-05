@@ -7,6 +7,7 @@ from shapely.geometry import Point, Polygon
 import numpy as np
 import matplotlib
 from scipy.stats import pearsonr
+from .utils import fast_abs_percentile
 
 
 def compute_experiment(n_components, spatial_scale_geometry, temporal_filter, output_name, threshold=1e-02):
@@ -66,3 +67,5 @@ output_name = 'localidades_2017'
 out_put_ic_3_exp_1, out_put_temp_3_exp_1 = compute_experiment(n_components=3,
                                                               spatial_scale_geometry=spatial_scale_geometry,
                                                               temporal_filter=filter, output_name=output_name)
+
+

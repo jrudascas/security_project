@@ -6,6 +6,7 @@ from shapely.geometry import Point, Polygon
 import numpy as np
 import matplotlib
 from scipy.stats import pearsonr
+from .utils import fast_abs_percentile
 
 font = {'size': 3}
 matplotlib.rc('font', **font)
@@ -26,7 +27,7 @@ def compare_ica_results(*args):
     return np.mean(similarity_list)
 
 
-def compute_experiment(n_components, spatial_scale_geometry, temporal_filter, output_name, threshold=1e-02):
+def compute_experiment(n_components, spatial_scale_geometry, temporal_filter, output_name, threshold=None):
     latitude_field_name = 'LATITUD'
     longitude_field_name = 'LONGITUD'
     date_field_name = 'FECHA'
@@ -74,6 +75,10 @@ def compute_experiment(n_components, spatial_scale_geometry, temporal_filter, ou
     # print(temporal_ic.shape)
 
     spatial_ic_ = np.abs(spatial_ic_)
+
+    if threshold is None:
+        threshold = fast_abs_percentile(spatial_ic_) - 1e-5
+
     spatial_ic_[np.where(spatial_ic_ < threshold)] = 0
 
     s_gdf = GeoDataFrame(pd.DataFrame(spatial_ic_, columns=['C' + str(i + 1) for i in range(n_components)]),
