@@ -8,7 +8,7 @@
 security_venv/
 
 # Ignore checkpoints
-*/.ipynb_checkpoints
+*/.ipynb_checkpoints/
 
 # Ignore aditional folders and files
 profiles/nuse/figuras_nuse/
