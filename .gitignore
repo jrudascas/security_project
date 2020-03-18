@@ -12,6 +12,7 @@ security_venv/
 
 # Ignore aditional folders and files
 profiles/nuse/figuras_nuse/
+profiles/RNMC/figuras_rnmc/
 datasets
 assets
 plty_token.txt
