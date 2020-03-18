@@ -8,7 +8,7 @@
 security_venv/
 
 # Ignore checkpoints
-**/.ipynb_checkpoints
+**/.ipynb_checkpoints/
 
 # Ignore aditional folders and files
 profiles/nuse/figuras_nuse/
@@ -20,3 +20,4 @@ periodicity_experiments/predictability
 example_scripts
 user8.pem
 .DS_Store
+*/__init__.py
