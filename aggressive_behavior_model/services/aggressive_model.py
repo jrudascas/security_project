@@ -13,18 +13,18 @@ class AggressiveModel:
 
 class KDEModel(AggressiveModel):
 
-    def train(self,model_type,train_set):
+    def train(self,train_set, parameters_estimation):
         #should return fitted model
         pass
 
 class SEPPModel(AggressiveModel):
 
-    def train(self,model_type,train_set):
+    def train(self,train_set, parameters_estimation):
         #should return fitted model
         pass
 
 class SEPPCovModel(AggressiveModel):
 
-    def train(self,model_type,train_set):
+    def train(self,train_set, parameters_estimation):
         #should return fitted model
         pass
