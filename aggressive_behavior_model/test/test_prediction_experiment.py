@@ -7,12 +7,12 @@ import os, sys
 from os.path import dirname, join, abspath
 sys.path.insert(0, abspath(join(dirname(__file__), '..')))
 
-from services.prediction_experiment import predictionExperiment
+from services.prediction_experiment import PredictionExperiment
 
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.my_experiment = predictionExperiment()
+        self.my_experiment = PredictionExperiment()
 
     def test_set_up(self):
         siedco_dict = {

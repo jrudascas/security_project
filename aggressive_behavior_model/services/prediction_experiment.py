@@ -19,7 +19,7 @@ nuse_dict = {
 
 DATASET_DICT = {'SIEDCO':siedco_dict, 'NUSE':nuse_dict}
 
-class predictionExperiment:
+class PredictionExperiment:
 
     def __init__(self):
         self.dataset = {'name':'SIEDCO','path':''}
