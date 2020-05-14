@@ -27,7 +27,7 @@ rnmc_dict = {
                 'time_stamp':''
             }
 
-DATASET_DICT = {'SIEDCO':siedco_dict, 'NUSE':nuse_dict}
+DATASET_DICT = {'SIEDCO':siedco_dict, 'NUSE':nuse_dict, 'RNMC':rnmc_dict}
 
 class PredictionExperiment:
 

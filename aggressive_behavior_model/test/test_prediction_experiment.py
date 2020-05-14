@@ -88,7 +88,7 @@ class TestCase(unittest.TestCase):
 
     def test_filter_by_date_case4(self):
         #case 4: date on interval, rnmc
-        self.my_experiment.dataset['name'] = 'NUSE'
+        self.my_experiment.dataset['name'] = 'RNMC'
         self.my_experiment.dataset['data_dict'] = self.my_experiment.set_dictionary()
         head_path = '/Users/anamaria/Desktop/dev/security_project/datasets/'
         file = '06. verify_enrich_rnmc_12022020.csv'
