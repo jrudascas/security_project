@@ -85,3 +85,18 @@ class TestCase(unittest.TestCase):
         df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
         df_expected = df.loc[df['FECHA'] == "2018-01-01"]
         self.assertEqual(len(df_filtered),len(df_expected))
+
+    def test_filter_by_date_case4(self):
+        #case 4: date on interval, rnmc
+        self.my_experiment.dataset['name'] = 'NUSE'
+        self.my_experiment.dataset['data_dict'] = self.my_experiment.set_dictionary()
+        head_path = '/Users/anamaria/Desktop/dev/security_project/datasets/'
+        file = '06. verify_enrich_rnmc_12022020.csv'
+        df = pd.read_csv(head_path + file)
+        df = self.my_experiment.add_timestamp(df)
+        initial_date = '2018-01-01'
+        final_date = '2018-01-01'
+        current_dict = self.my_experiment.dataset['data_dict']
+        df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
+        df_expected = df.loc[df['FECHA'] == "2018-01-01"]
+        self.assertEqual(len(df_filtered),len(df_expected))

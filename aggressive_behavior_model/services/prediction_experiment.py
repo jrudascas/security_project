@@ -8,7 +8,7 @@ siedco_dict = {
                 'latitude': 'LATITUD_Y',
                 'longitude': 'LONGITUD_X',
                 'time': 'HORA_HECHO',
-                'time_stamp':'',
+                'time_stamp':''
                }
 
 nuse_dict = {
@@ -16,8 +16,16 @@ nuse_dict = {
                 'latitude': 'LATITUD',
                 'longitude': 'LONGITUD',
                 'time': 'HORA',
-                'time_stamp':'',
-               }
+                'time_stamp':''
+            }
+
+rnmc_dict = {
+                'date': 'FECHA',
+                'latitude': 'LATITUD',
+                'longitude': 'LONGITUD',
+                'time': 'HORA',
+                'time_stamp':''
+            }
 
 DATASET_DICT = {'SIEDCO':siedco_dict, 'NUSE':nuse_dict}
 
@@ -93,7 +101,7 @@ class PredictionExperiment:
             df.loc[df[current_dict['time']] == '00:00',current_dict['time']] = '00:01'
 
         if match_format_flag == False:
-            return "Date/time format error, check all rows match a structure pattern"
+            return "Date/time format error, check type and structure on date/time columns"
         else:
             return df
 
