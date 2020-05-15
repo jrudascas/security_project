@@ -8,16 +8,18 @@ from os.path import dirname, join, abspath
 sys.path.insert(0, abspath(join(dirname(__file__), '..')))
 
 from services.prediction_experiment import PredictionExperiment
-from services.aggressive_model import KDEModel
+from services.aggressive_model import NaiveCounting
 
 class TestCase(unittest.TestCase):
 
     def setUp(self):
         dataset = {'name':'SIEDCO','path':'//'}
+        filter = {'field':'LOCALIDAD','value':'CIUDAD BOLIVAR'}
         train_dates = {'initial_date':'2018-01-01','final_date':'2018-01-07'}
+        model = NaiveCounting
         metrics = {'hit-rate':[0.1],'PAI':[0.1]}
         aggregation_data = "subsequent"
-        self.my_experiment = PredictionExperiment(dataset, train_dates, metrics, aggregation_data)
+        self.my_experiment = PredictionExperiment(dataset, filter, train_dates, model, metrics, aggregation_data)
 
     def test_set_up(self):
         siedco_dict = {
@@ -28,10 +30,10 @@ class TestCase(unittest.TestCase):
                         'time_stamp':'',
                        }
         self.assertEqual(self.my_experiment.dataset,{'name':'SIEDCO','path':'//','data_dict':siedco_dict})
+        self.assertEqual(self.my_experiment.filter,{'field':'LOCALIDAD','value':'CIUDAD BOLIVAR'})
         self.assertEqual(self.my_experiment.train_dates, {'initial_date':'2018-01-01','final_date':'2018-01-07'})
+        self.assertEqual(self.my_experiment.model, NaiveCounting)
         self.assertEqual(self.my_experiment.metrics, {'hit-rate':[0.1],'PAI':[0.1]})
-        #self.assertEqual(self.my_experiment.validation, {'nested cross-validation':'walk-forward chaining','time_unit':'days'})
-        #self.assertEqual(type(self.my_experiment.model), type(KDEModel()))
         self.assertEqual(self.my_experiment.aggregation_data, 'subsequent')
 
     def test_select_train_data_case1(self):
@@ -58,8 +60,8 @@ class TestCase(unittest.TestCase):
         df = self.my_experiment.add_timestamp(df)
         initial_date = '2018-01-01'
         final_date = '2018-01-01'
-        current_dict = self.my_experiment.dataset['data_dict']
-        df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
+        dataset_dict = self.my_experiment.dataset['data_dict']
+        df_filtered = PredictionExperiment.filter_by_date(df,dataset_dict,initial_date,final_date)
         df_expected = df.loc[df['FECHA_HECHO'] == "2018-01-01"]
         self.assertEqual(len(df_filtered),len(df_expected))
 
@@ -71,8 +73,8 @@ class TestCase(unittest.TestCase):
         df = self.my_experiment.add_timestamp(df)
         initial_date = '2021-01-01'
         final_date = '2021-01-02'
-        current_dict = self.my_experiment.dataset['data_dict']
-        df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
+        dataset_dict = self.my_experiment.dataset['data_dict']
+        df_filtered = PredictionExperiment.filter_by_date(df,dataset_dict,initial_date,final_date)
         self.assertEqual(len(df_filtered),0)
 
     def test_filter_by_date_case3(self):
@@ -86,8 +88,8 @@ class TestCase(unittest.TestCase):
         df = self.my_experiment.add_timestamp(df)
         initial_date = '2018-01-01'
         final_date = '2018-01-01'
-        current_dict = self.my_experiment.dataset['data_dict']
-        df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
+        dataset_dict = self.my_experiment.dataset['data_dict']
+        df_filtered = PredictionExperiment.filter_by_date(df,dataset_dict,initial_date,final_date)
         df_expected = df.loc[df['FECHA'] == "2018-01-01"]
         self.assertEqual(len(df_filtered),len(df_expected))
 
@@ -102,7 +104,7 @@ class TestCase(unittest.TestCase):
         df = self.my_experiment.add_timestamp(df)
         initial_date = '2018-01-01'
         final_date = '2018-01-01'
-        current_dict = self.my_experiment.dataset['data_dict']
-        df_filtered = PredictionExperiment.filter_by_date(df,current_dict,initial_date,final_date)
+        dataset_dict = self.my_experiment.dataset['data_dict']
+        df_filtered = PredictionExperiment.filter_by_date(df,dataset_dict,initial_date,final_date)
         df_expected = df.loc[df['FECHA'] == "2018-01-01"]
         self.assertEqual(len(df_filtered),len(df_expected))
