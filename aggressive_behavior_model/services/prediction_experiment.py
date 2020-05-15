@@ -31,14 +31,13 @@ DATASET_DICT = {'SIEDCO':siedco_dict, 'NUSE':nuse_dict, 'RNMC':rnmc_dict}
 
 class PredictionExperiment:
 
-    def __init__(self):
-        self.dataset = {'name':'SIEDCO','path':''}
-        self.train_set = {'initial_date':'2018-01-01','final_date':'2018-01-07'}
-        self.metrics = {'hit-rate':[0.1],'PAI':[0.1]}
-        self.validation = {'nested cross-validation':'walk-forward chaining','time_unit':'days'}
-        self.model = KDEModel()
-        self.aggregation_data = "subsequent"
-
+    def __init__(self, dataset, train_dates, metrics, aggregation_data):
+        self.dataset = dataset
+        self.train_dates = train_dates
+        self.metrics = metrics
+        #self.validation = {'nested cross-validation':'walk-forward chaining','time_unit':'days'}
+        #self.model = KDEModel()
+        self.aggregation_data = aggregation_data
         self.dataset['data_dict'] = self.set_dictionary()
 
     def set_dictionary(self):
@@ -65,7 +64,7 @@ class PredictionExperiment:
         except FileNotFoundError:
             return "File not found, check path and file name"
         df = self.add_timestamp(df)
-        df_filtered = PredictionExperiment.filter_by_date(df, current_dict, self.train_set['initial_date'], self.train_set['final_date'])
+        df_filtered = PredictionExperiment.filter_by_date(df, current_dict, self.train_dates['initial_date'], self.train_dates['final_date'])
         return df_filtered
 
     def add_timestamp(self, df):
@@ -73,7 +72,6 @@ class PredictionExperiment:
         current_dict = self.dataset['data_dict']
         if current_dict['time_stamp'] == '':
             df = self.format_date_fields(df)
-            #df[current_dict['date']] = pd.to_datetime(df[current_dict['date']], format='%Y-%m-%d').dt.strftime('%Y-%m-%d')
             df['TIME_STAMP']=pd.to_datetime(df[current_dict['date']]+ ' '+df[current_dict['time']])
             self.dataset['data_dict']['time_stamp'] = 'TIME_STAMP'
         return df

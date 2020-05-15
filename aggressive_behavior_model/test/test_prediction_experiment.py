@@ -13,7 +13,11 @@ from services.aggressive_model import KDEModel
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.my_experiment = PredictionExperiment()
+        dataset = {'name':'SIEDCO','path':'//'}
+        train_dates = {'initial_date':'2018-01-01','final_date':'2018-01-07'}
+        metrics = {'hit-rate':[0.1],'PAI':[0.1]}
+        aggregation_data = "subsequent"
+        self.my_experiment = PredictionExperiment(dataset, train_dates, metrics, aggregation_data)
 
     def test_set_up(self):
         siedco_dict = {
@@ -23,11 +27,11 @@ class TestCase(unittest.TestCase):
                         'time': 'HORA_HECHO',
                         'time_stamp':'',
                        }
-        self.assertEqual(self.my_experiment.dataset,{'name':'SIEDCO','path':'','data_dict':siedco_dict})
-        self.assertEqual(self.my_experiment.train_set, {'initial_date':'2018-01-01','final_date':'2018-01-07'})
+        self.assertEqual(self.my_experiment.dataset,{'name':'SIEDCO','path':'//','data_dict':siedco_dict})
+        self.assertEqual(self.my_experiment.train_dates, {'initial_date':'2018-01-01','final_date':'2018-01-07'})
         self.assertEqual(self.my_experiment.metrics, {'hit-rate':[0.1],'PAI':[0.1]})
-        self.assertEqual(self.my_experiment.validation, {'nested cross-validation':'walk-forward chaining','time_unit':'days'})
-        self.assertEqual(type(self.my_experiment.model), type(KDEModel()))
+        #self.assertEqual(self.my_experiment.validation, {'nested cross-validation':'walk-forward chaining','time_unit':'days'})
+        #self.assertEqual(type(self.my_experiment.model), type(KDEModel()))
         self.assertEqual(self.my_experiment.aggregation_data, 'subsequent')
 
     def test_select_train_data_case1(self):
@@ -73,6 +77,7 @@ class TestCase(unittest.TestCase):
 
     def test_filter_by_date_case3(self):
         #case 3: date on interval, nuse
+        dataset = {'name':'NUSE','path':''}
         self.my_experiment.dataset['name'] = 'NUSE'
         self.my_experiment.dataset['data_dict'] = self.my_experiment.set_dictionary()
         head_path = '/Users/anamaria/Desktop/dev/security_project/datasets/'
@@ -88,6 +93,7 @@ class TestCase(unittest.TestCase):
 
     def test_filter_by_date_case4(self):
         #case 4: date on interval, rnmc
+        dataset = {'name':'RNMC','path':''}
         self.my_experiment.dataset['name'] = 'RNMC'
         self.my_experiment.dataset['data_dict'] = self.my_experiment.set_dictionary()
         head_path = '/Users/anamaria/Desktop/dev/security_project/datasets/'
