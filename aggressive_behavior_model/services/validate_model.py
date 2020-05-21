@@ -4,7 +4,7 @@ import open_cp
 from open_cp import evaluation
 
 from services.process_data import ProcessData
-from services.aggressive_model import NaiveCounting
+from services.aggressive_model import NaiveCounting, SpaceTimeKDE
 
 class ValidateModel:
 
@@ -27,7 +27,7 @@ class ValidateModel:
         ### validation
         delta_hour = 6
         hotspot_percentage = 20
-        area_rates = [10,20,30,100]
+        area_rates = [10,20,30,40,50,60,70,80,90,100]
         area_rates = list(map(lambda a: a*hotspot_percentage/100, area_rates))
 
         validation_dates = {'initial':current_validation_date,'final':current_validation_date}
