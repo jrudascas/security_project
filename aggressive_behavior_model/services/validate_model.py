@@ -4,7 +4,7 @@ import open_cp
 from open_cp import evaluation
 
 from services.process_data import ProcessData
-from services.aggressive_model import NaiveCounting, SpaceTimeKDE
+from services.aggressive_model import NaiveCounting, SpaceTimeKDE, SEPPexp
 
 class ValidateModel:
 
