@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from services.process_data import ProcessData
 from services.validate_model import ValidateModel
 
@@ -42,4 +44,13 @@ class PredictionExperiment:
         df_train = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, self.train_dates)
         validation = ValidateModel(df_train, self.dataset_info['dict'], time_unit, outer_iterations)
         performance_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.metrics)
+        return performance_results
+
+    def run_single_validation(self, grid_size, validation_date, time_unit, outer_iterations):
+        data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
+        df = data.get_formated_df()
+        self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
+        df_filtered = ProcessData.filter_by_field(df, self.custom_filter['field'], self.custom_filter['value'])
+        validation = ValidateModel(df_filtered, self.dataset_info['dict'], time_unit, outer_iterations)
+        performance_results = validation.inner_loop_validation(self.model, grid_size, self.train_dates, datetime.strptime(validation_date,'%Y-%m-%d'), self.metrics)
         return performance_results
