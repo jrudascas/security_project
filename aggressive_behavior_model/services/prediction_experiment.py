@@ -5,10 +5,9 @@ from services.validate_model import ValidateModel
 
 class PredictionExperiment:
 
-    def __init__(self, dataset_info, custom_filter, train_dates, model, metrics, aggregation_data):
+    def __init__(self, dataset_info, custom_filter, train_dates, validation_dates, model, metrics, aggregation_data):
         # TODO: check if df is required as an instance attribute
         """
-            :df: pandas dataframe
             :dataset: dictionary with db name, file path location and dataset dictionary
                     (e.g. {'name':'SIEDCO','path':'//','dict':{}})
             :custom_filter: dictionary with column db field_name and value to filter
@@ -20,10 +19,10 @@ class PredictionExperiment:
                     (e.g. {'hit-rate':[0.1],'PAI':[0.1]})
             :aggregation_data: string. Allowed values: "a priori", "subsequent"
         """
-        #self.df = df
         self.dataset_info = dataset_info
         self.custom_filter = custom_filter
         self.train_dates = train_dates
+        self.validation_dates = validation_dates
         self.model = model
         self.metrics = metrics
         self.aggregation_data = aggregation_data
@@ -39,11 +38,11 @@ class PredictionExperiment:
         self.check_exp_params()
         data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
         df = data.get_formated_df()
-        #self.df = df
         self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
-        df_train = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, self.train_dates)
-        validation = ValidateModel(df_train, self.dataset_info['dict'], time_unit, outer_iterations)
-        performance_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.metrics)
+        dates_interval = {'initial': self.train_dates['initial'], 'final': self.validation_dates['final']}
+        df_train_validation = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, dates_interval)
+        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations)
+        performance_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.validation_dates, self.metrics)
         return performance_results
 
     def run_single_validation(self, grid_size, validation_date, time_unit, outer_iterations):
