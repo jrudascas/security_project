@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pickle
 import pyproj
 import open_cp
+import warnings
 
 siedco_dict = {
                 'date': 'FECHA_HECHO',
@@ -62,7 +63,8 @@ class ProcessData:
 
         df_filtered = df[(df[time_stamp_field] > initial_date) & (df[time_stamp_field] < real_final_date)]
         if len(df_filtered) == 0:
-            raise ValueError("Empty filter result, check dates.")
+            #raise ValueError("Empty filter result, check dates.")
+            warnings.warn('Empty filter result, check dates. Initial date: '+initial_date.strftime('%Y-%m-%d')+', final date: '+final_date.strftime('%Y-%m-%d'))
         return df_filtered
 
     def filter_by_field(df, name_field, value):
@@ -133,8 +135,8 @@ class ProcessData:
 
     def select_data(df, dataset_dict, filter, dates):
         df_filtered = ProcessData.filter_by_field(df, filter['field'], filter['value'])
-        df_train = ProcessData.filter_by_date(df_filtered, dataset_dict, dates['initial'], dates['final'])
-        return df_train
+        df_filtered = ProcessData.filter_by_date(df_filtered, dataset_dict, dates['initial'], dates['final'])
+        return df_filtered
 
     def set_data_region(xcoords,ycoords):
         # Extracts the bounding regions
