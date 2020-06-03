@@ -19,7 +19,7 @@ class TestCase(unittest.TestCase):
         self.my_validation = ValidateModel(df_train, dataset_dict, time_unit, outer_iterations)
 
     def test_set_up(self):
-        self.assertEqual(self.my_validation.df_train, None)
+        self.assertEqual(self.my_validation.df_train_validation, None)
         self.assertEqual(self.my_validation.dataset_dict, None)
         self.assertEqual(self.my_validation.time_unit, 'days')
         self.assertEqual(self.my_validation.outer_iterations, 6)
@@ -28,9 +28,9 @@ class TestCase(unittest.TestCase):
         output_path = '/Users/anamaria/Desktop/dev/security_project/aggressive_behavior_model/pkl/'
         file_name = 'df_train'
         infile = open(output_path+file_name+'.pkl','rb')
-        df_train = pickle.load(infile)
+        df_train_validation = pickle.load(infile)
         infile.close()
-        self.my_validation.df_train = df_train
+        self.my_validation.df_train_validation = df_train_validation
         siedco_dict = {
                         'date': 'FECHA_HECHO',
                         'latitude': 'LATITUD_Y',
@@ -39,5 +39,4 @@ class TestCase(unittest.TestCase):
                         'time_stamp':'TIME_STAMP'
                        }
         self.my_validation.dataset_dict = siedco_dict
-        self.my_validation.walk_fwd_chain(model_class_name="NaiveCounting", grid_size=150, dates={'initial':'2018-01-01','final':'2018-01-07'},metrics={'hit-rate':[0.1],'PAI':[0.1]})
-        
+        self.my_validation.walk_fwd_chain(model_class_name="NaiveCounting", grid_size=150, train_dates_base={'initial':'2018-01-01','final':'2018-01-05'},validation_dates={'initial':'2018-01-06','final':'2018-01-07'},metrics={'hit-rate':[0.1],'PAI':[0.1]})

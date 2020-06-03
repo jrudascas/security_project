@@ -42,7 +42,7 @@ class ValidateModel:
 
         for hour in range(0, 24, delta_hour):
             prediction_datetime = prediction_date+timedelta(hours=hour)
-            if df_validation.empty: #if no points (e.g. crimes) are not reported on data interval
+            if df_validation.empty: #if no points (e.g. crimes) are reported on data interval
                 hitrates = { i : -1.0 for i in area_rates }
             else:
                 time_predicts = np.datetime64(prediction_date) + np.timedelta64(hour, 'h')
@@ -50,6 +50,7 @@ class ValidateModel:
                 mask = (validation_points.timestamps >= time_predicts) & (validation_points.timestamps < score_end_time)
                 eval_pts = validation_points[mask]
                 prediction = model_object.predict(trained_model, prediction_datetime)
+                print(prediction)
                 hitrates = open_cp.evaluation.hit_rates(prediction, eval_pts, area_rates)
 
             if flag_performance_array==True:
@@ -67,9 +68,9 @@ class ValidateModel:
         current_validation_date = current_validation_date + timedelta(days=1)
         return (train_subset_dates, current_validation_date)
 
-    def walk_fwd_chain(self, model_class_name, grid_size, train_dates, validation_dates, metrics):
-        initial_train_date = datetime.strptime(train_dates['initial'],'%Y-%m-%d')
-        final_train_date = datetime.strptime(train_dates['final'],'%Y-%m-%d')
+    def walk_fwd_chain(self, model_class_name, grid_size, train_dates_base, validation_dates, metrics):
+        initial_train_date = datetime.strptime(train_dates_base['initial'],'%Y-%m-%d')
+        final_train_date = datetime.strptime(train_dates_base['final'],'%Y-%m-%d')
         initial_validation_date = datetime.strptime(validation_dates['initial'],'%Y-%m-%d')
         final_validation_date = datetime.strptime(validation_dates['final'],'%Y-%m-%d')
         current_validation_date = initial_validation_date
