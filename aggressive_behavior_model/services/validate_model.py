@@ -40,18 +40,54 @@ class ValidateModel:
         prediction_date = current_validation_date
         flag_performance_array = True
 
-        for hour in range(0, 24, delta_hour):
-            prediction_datetime = prediction_date+timedelta(hours=hour)
+        for init_interval_hour in range(0, 24, delta_hour):
+            prediction_datetime = prediction_date+timedelta(hours=init_interval_hour)
             if df_validation.empty: #if no points (e.g. crimes) are reported on data interval
                 hitrates = { i : -1.0 for i in area_rates }
             else:
-                time_predicts = np.datetime64(prediction_date) + np.timedelta64(hour, 'h')
+                time_predicts = np.datetime64(prediction_date) + np.timedelta64(init_interval_hour, 'h')
                 score_end_time = time_predicts + np.timedelta64(delta_hour, 'h')
                 mask = (validation_points.timestamps >= time_predicts) & (validation_points.timestamps < score_end_time)
                 eval_pts = validation_points[mask]
-                prediction = model_object.predict(trained_model, prediction_datetime)
-                print(prediction)
-                hitrates = open_cp.evaluation.hit_rates(prediction, eval_pts, area_rates)
+                prediction_by_hour = []
+                hour_step = 1
+                for hour in range(0,delta_hour,hour_step):
+                    print(hour)
+                    prediction_datetime = prediction_datetime+timedelta(hours=hour_step)
+                    prediction = model_object.predict(trained_model, prediction_datetime)
+                    print(prediction_datetime)
+                    print(prediction)
+                    print(list(prediction.__dict__.keys()))
+                    print(prediction.xoffset)
+                    print(prediction.yoffset)
+                    print(prediction.xsize)
+                    print(prediction.ysize)
+                    print(prediction._matrix)
+                    prediction_by_hour.append(prediction)
+                print(prediction_by_hour)
+                xoffset_avg = sum([p._xoffset for p in prediction_by_hour]) / len(prediction_by_hour)
+                print('xoffset_avg',xoffset_avg)
+                yoffset_avg = sum([p._yoffset for p in prediction_by_hour]) / len(prediction_by_hour)
+                print('yoffset_avg',yoffset_avg)
+                xsize_avg = sum([p._xsize for p in prediction_by_hour]) / len(prediction_by_hour)
+                print('xsize_avg',xsize_avg)
+                ysize_avg = sum([p._ysize for p in prediction_by_hour]) / len(prediction_by_hour)
+                print('ysize_avg',ysize_avg)
+                matrix_avg = sum([p._matrix for p in prediction_by_hour]) / len(prediction_by_hour)
+                print('matrix_avg',matrix_avg)
+
+                # TODO: Include on test
+                #Test: since the prediction is the same for all hours using NaiveCounting model, average instance values should be equivalent to specific prediction values
+                print(prediction._xoffset == xoffset_avg)
+                print(prediction._yoffset == yoffset_avg)
+                print(prediction._xsize == xsize_avg)
+                print(prediction._ysize == ysize_avg)
+                print((prediction._matrix == matrix_avg).all())
+
+                avg_grid_pred_array = open_cp.predictors.GridPredictionArray(xsize=xsize_avg, ysize=ysize_avg, matrix=matrix_avg, xoffset=xoffset_avg, yoffset=yoffset_avg)
+                print(avg_grid_pred_array)
+
+                hitrates = open_cp.evaluation.hit_rates(avg_grid_pred_array, eval_pts, area_rates)
 
             if flag_performance_array==True:
                 flag_performance_array = False

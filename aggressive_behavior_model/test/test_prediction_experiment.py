@@ -33,4 +33,5 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.my_experiment.aggregation_data, 'subsequent')
 
     def test_run_ncv(self):
+        self.my_experiment.validation_dates = {'initial':'2018-01-08','final':'2018-01-08'}
         self.my_experiment.run_ncv_experiment('',150,1)
