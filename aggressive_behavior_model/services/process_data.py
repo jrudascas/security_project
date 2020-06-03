@@ -64,7 +64,7 @@ class ProcessData:
         df_filtered = df[(df[time_stamp_field] > initial_date) & (df[time_stamp_field] < real_final_date)]
         if len(df_filtered) == 0:
             #raise ValueError("Empty filter result, check dates.")
-            warnings.warn('Empty filter result, check dates. Initial date: '+initial_date.strftime('%Y-%m-%d')+', final date: '+final_date.strftime('%Y-%m-%d'))
+            warnings.warn('Empty filter result, check dates. Initial date: '+initial_date.strftime('%Y-%m-%d')+', final date: '+real_final_date.strftime('%Y-%m-%d'))
         return df_filtered
 
     def filter_by_field(df, name_field, value):

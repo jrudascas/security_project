@@ -48,7 +48,7 @@ class TestCase(unittest.TestCase):
         initial_date = '2021-01-01'
         final_date = '2021-01-02'
         dataset_dict = self.my_data.dataset_dict
-        self.assertRaises(ValueError, lambda: ProcessData.filter_by_date(df,dataset_dict,initial_date,final_date))
+        self.assertWarns(UserWarning, lambda: ProcessData.filter_by_date(df,dataset_dict,initial_date,final_date))
 
     def test_filter_by_date_case3(self):
         #case 3: date on interval, nuse
