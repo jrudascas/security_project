@@ -48,10 +48,10 @@ class TestCase(unittest.TestCase):
         initial_date = '2021-01-01'
         final_date = '2021-01-02'
         dataset_dict = self.my_data.dataset_dict
-        self.assertRaises(ValueError, lambda: ProcessData.filter_by_date(df,dataset_dict,initial_date,final_date))
+        self.assertWarns(UserWarning, lambda: ProcessData.filter_by_date(df,dataset_dict,initial_date,final_date))
 
     def test_filter_by_date_case3(self):
-        #case 3: date on interval, nuse
+        #case 3: date on interval, nuse sample
         dataset = {'name':'NUSE','path':''}
         self.my_data.dataset_name = 'NUSE'
         self.my_data.dataset_dict = self.my_data.set_dictionary()
@@ -67,7 +67,23 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(df_filtered),len(df_expected))
 
     def test_filter_by_date_case4(self):
-        #case 4: date on interval, rnmc
+        #case 4: date on interval, nuse full data
+        dataset = {'name':'NUSE','path':''}
+        self.my_data.dataset_name = 'NUSE'
+        self.my_data.dataset_dict = self.my_data.set_dictionary()
+        head_path = '/Users/anamaria/Desktop/dev/security_project/datasets/'
+        file = 'verify_enrich_nuse_29112019.csv'
+        df = pd.read_csv(head_path + file)
+        df = self.my_data.add_timestamp(df)
+        initial_date = '2018-01-01'
+        final_date = '2018-01-01'
+        dataset_dict = self.my_data.dataset_dict
+        df_filtered = ProcessData.filter_by_date(df,dataset_dict,initial_date,final_date)
+        df_expected = df.loc[df['FECHA'] == "2018-01-01"]
+        self.assertEqual(len(df_filtered),len(df_expected))
+
+    def test_filter_by_date_case5(self):
+        #case 5: date on interval, rnmc
         dataset = {'name':'RNMC','path':''}
         self.my_data.dataset_name = 'RNMC'
         self.my_data.dataset_dict = self.my_data.set_dictionary()
