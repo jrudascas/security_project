@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
+import numpy as np
 import pickle
 import pyproj
 import open_cp
@@ -50,6 +51,15 @@ class ProcessData:
             df['TIME_STAMP']=pd.to_datetime(df[dataset_dict['date']]+ ' '+df[dataset_dict['time']])
             self.dataset_dict['time_stamp'] = 'TIME_STAMP'
         return df
+
+    def fill_array(flag, array, element):
+        if flag==True:
+            flag = False
+            array = element
+        else:
+            array = np.vstack((array, element))
+
+        return flag, array
 
     def filter_by_date(df, dataset_dict, initial_date, final_date):
         time_stamp_field = dataset_dict['time_stamp']
