@@ -39,4 +39,4 @@ class TestCase(unittest.TestCase):
                         'time_stamp':'TIME_STAMP'
                        }
         self.my_validation.dataset_dict = siedco_dict
-        self.my_validation.walk_fwd_chain(model_class_name="NaiveCounting", grid_size=150, train_dates_base={'initial':'2018-01-01','final':'2018-01-05'},validation_dates={'initial':'2018-01-06','final':'2018-01-07'},metrics={'hit-rate':[0.1],'PAI':[0.1]})
+        self.my_validation.walk_fwd_chain(model_name="NaiveCounting", grid_size=150, train_dates_base={'initial':'2018-01-01','final':'2018-01-05'},validation_dates={'initial':'2018-01-06','final':'2018-01-07'},metrics={'hit-rate':[0.1],'PAI':[0.1]})
