@@ -3,7 +3,7 @@ import numpy as np
 import open_cp
 import matplotlib.pyplot as plt
 
-from services.aggressive_model import NaiveCounting, SpaceTimeKDE, SEPPexp
+from services.aggressive_model import NaiveCounting, SpaceTimeKDE, SEPPexp, SEPPexpWeekDay
 from services.process_data import ProcessData
 
 
@@ -26,8 +26,10 @@ class ValidateModel:
                                                      self.dataset_dict,
                                                      train_subset_dates['initial'],
                                                      train_subset_dates['final'])
-        print(len(df_train_subset))
-        trained_model = model_object.train(df_train_subset, self.dataset_dict, grid_size)
+        trained_model = model_object.train(df_train_subset, self.dataset_dict,
+                                            grid_size,
+                                            week_day= current_validation_date.strftime("%A"))
+        print(len(trained_model.data.timestamps))
         ## TODO: save trained_model?
 
         ### validation
@@ -59,11 +61,11 @@ class ValidateModel:
                                                                    model_object,
                                                                    trained_model)
             average_prediction = ValidateModel.interval_average_prediction(prediction_by_hour)
-            prediction_interval = {'initial':initial_prediction_datetime,
-                                   'final':final_prediction_datetime}
 
             # TODO: move plot outside this service
-            ValidateModel.plot_grid_prediction(average_prediction, eval_pts, prediction_interval)
+            #prediction_interval = {'initial':initial_prediction_datetime,
+            #                       'final':final_prediction_datetime}
+            #ValidateModel.plot_grid_prediction(average_prediction, eval_pts, prediction_interval)
 
             element = np.array([initial_prediction_datetime,
                                 final_prediction_datetime,
