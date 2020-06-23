@@ -23,6 +23,7 @@ def hit_counts_ground_truth(grid_pred, timed_points, percentage_coverage):
             covered = open_cp.evaluation.top_slice(risk, coverage / 100)
         else:
             covered = open_cp.evaluation.top_slice(risk, ground_events_coverage / 100)
+            coverage = ground_events_coverage
         mask = (gx < 0) | (gx >= covered.shape[1]) | (gy < 0) | (gy >= covered.shape[0])
         gx, gy = gx[~mask], gy[~mask]
         count = _np.sum(covered[(gy,gx)]) # count events that occur on selected hotspots
