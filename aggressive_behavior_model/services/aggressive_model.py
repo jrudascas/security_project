@@ -19,6 +19,8 @@ class NaiveCounting(AggressiveModel):
 
     def train(self, df_train_subset, dataset_dict, grid_size, **kwargs):
         train_pts, train_region = ProcessData.get_time_space_points(df_train_subset, dataset_dict)
+        if kwargs['region'] != None:
+            train_region = kwargs['region']
         trained_model = naive.CountingGridKernel(grid_width=grid_size, region=train_region)
         trained_model.data = train_pts
         return trained_model
@@ -27,6 +29,8 @@ class SpaceTimeKDE(AggressiveModel):
 
     def train(self, df_train_subset, dataset_dict, grid_size, **kwargs):
         train_pts, train_region = ProcessData.get_time_space_points(df_train_subset, dataset_dict)
+        if kwargs['region'] != None:
+            train_region = kwargs['region']
         trained_model = kde.KDE(region=train_region, grid_size=grid_size)
         trained_model.time_kernel = kde.ExponentialTimeKernel(1)
         trained_model.space_kernel = kde.GaussianBaseProvider()
@@ -37,6 +41,8 @@ class SEPPexp(AggressiveModel):
 
     def train(self, df_train_subset, dataset_dict, grid_size, **kwargs):
         train_pts, train_region = ProcessData.get_time_space_points(df_train_subset, dataset_dict)
+        if kwargs['region'] != None:
+            train_region = kwargs['region']
         trainer = seppexp.SEPPTrainer(region=train_region, grid_size=grid_size)
         trainer.data = train_pts
         trained_model = trainer.train(iterations=50, use_corrected=True)
@@ -57,6 +63,8 @@ class SEPPexpWeekDay(AggressiveModel):
                                                       kwargs['week_day'])
 
         train_pts, train_region = ProcessData.get_time_space_points(df_train_subset, dataset_dict)
+        if kwargs['region'] != None:
+            train_region = kwargs['region']
         trainer = seppexp.SEPPTrainer(region=train_region, grid_size=grid_size)
         trainer.data = train_pts
         trained_model = trainer.train(iterations=50, use_corrected=True)

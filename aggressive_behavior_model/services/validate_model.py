@@ -9,11 +9,12 @@ from services.process_data import ProcessData
 
 class ValidateModel:
 
-    def __init__(self, df_train_validation, dataset_dict, time_unit, outer_iterations):
+    def __init__(self, df_train_validation, dataset_dict, time_unit, outer_iterations, region):
         self.df_train_validation = df_train_validation
         self.dataset_dict = dataset_dict
         self.time_unit = time_unit
         self.outer_iterations = outer_iterations
+        self.region = region
 
     def check_validation_params(self):
         #check number of iterations vs time_unit and train set
@@ -28,7 +29,8 @@ class ValidateModel:
                                                      train_subset_dates['final'])
         trained_model = model_object.train(df_train_subset, self.dataset_dict,
                                             grid_size,
-                                            week_day= current_validation_date.strftime("%A"))
+                                            week_day= current_validation_date.strftime("%A"),
+                                            region= self.region)
         print(len(trained_model.data.timestamps))
         ## TODO: save trained_model?
 

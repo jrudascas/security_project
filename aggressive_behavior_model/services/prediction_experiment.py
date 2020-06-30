@@ -41,7 +41,22 @@ class PredictionExperiment:
         self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
         dates_interval = {'initial': self.train_dates['initial'], 'final': self.validation_dates['final']}
         df_train_validation = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, dates_interval)
-        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations)
+        region = None
+        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations, region)
+        prediction_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.validation_dates, self.metrics)
+        return prediction_results
+
+    def run_ncv_experiment_region(self, time_unit, grid_size, region):
+        # TODO: refactor with previous method (run_ncv_experiment)
+        """run nested-cross validation"""
+        self.check_exp_params()
+        data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
+        df = data.get_formated_df()
+        self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
+        dates_interval = {'initial': self.train_dates['initial'], 'final': self.validation_dates['final']}
+        df_train_validation = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, dates_interval)
+        outer_iterations = ''
+        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations, region)
         prediction_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.validation_dates, self.metrics)
         return prediction_results
 
