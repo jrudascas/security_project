@@ -41,7 +41,8 @@ class SEPPexp(AggressiveModel):
 
     def train(self, df_train_subset, dataset_dict, grid_size, **kwargs):
         train_pts, train_region = ProcessData.get_time_space_points(df_train_subset, dataset_dict)
-        if kwargs['region'] != None:
+        #if kwargs['region'] != 'default':
+        if 'region' in kwargs:
             train_region = kwargs['region']
         trainer = seppexp.SEPPTrainer(region=train_region, grid_size=grid_size)
         trainer.data = train_pts
