@@ -140,6 +140,7 @@ class ProcessData:
         return df
 
     def normalize_matrix(matrix_array):
+        matrix_array = matrix_array.astype(float)
         matrix_array *= 1/matrix_array.max()
         return matrix_array
 

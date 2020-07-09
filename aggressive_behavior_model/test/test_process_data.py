@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 import pandas as pd
 
 # Can't use from... import directly since the file is into another folder
@@ -120,6 +121,14 @@ class TestCase(unittest.TestCase):
         #case 4: error, value doesn't exist
         df = pd.read_csv(self.my_data.dataset_path)
         self.assertRaises(ValueError, lambda: ProcessData.filter_by_field(df, 'LOCALIDAD', 'NORMANDIA'))
+
+    def test_normalize_matrix(self):
+        matrix = np.arange(1,5)
+        matrix = matrix.reshape(2,2)
+        matrix_expected = np.array([[0.25,0.5],[0.75,1]])
+        matrix_normalized = ProcessData.normalize_matrix(matrix)
+        self.assertTrue((matrix_normalized==matrix_expected).all())
+
 
     # def test_select_data_case1(self):
     #     #case 1: file not found
