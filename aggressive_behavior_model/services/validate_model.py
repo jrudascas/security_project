@@ -132,5 +132,4 @@ class ValidateModel:
             train_subset_dates, current_validation_date = a,b
 
         prediction_historical_list = [item for sublist in prediction_historical for item in sublist]
-        ## TODO:  find average performance
         return prediction_historical_list

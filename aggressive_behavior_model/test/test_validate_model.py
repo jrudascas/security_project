@@ -15,14 +15,14 @@ class TestCase(unittest.TestCase):
         df_train = None
         dataset_dict = None
         time_unit = 'days'
-        outer_iterations = 6
-        self.my_validation = ValidateModel(df_train, dataset_dict, time_unit, outer_iterations)
+        region = None
+        self.my_validation = ValidateModel(df_train, dataset_dict, time_unit, region)
 
     def test_set_up(self):
         self.assertEqual(self.my_validation.df_train_validation, None)
         self.assertEqual(self.my_validation.dataset_dict, None)
         self.assertEqual(self.my_validation.time_unit, 'days')
-        self.assertEqual(self.my_validation.outer_iterations, 6)
+        self.assertEqual(self.my_validation.region, None)
 
     def test_walk_fwd_chain(self):
         output_path = '/Users/anamaria/Desktop/dev/security_project/aggressive_behavior_model/pkl/'
