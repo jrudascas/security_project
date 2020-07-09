@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import open_cp
 import pandas as pd
 import pickle
 
@@ -14,20 +15,68 @@ from services import prediction_metrics
 
 class TestCase(unittest.TestCase):
 
-    def SetUp(self):
-        pass
-
     def test_hit_rate_default_1(self):
         """ Test hit_rate=1 if all real events falls on hotspots """
-        pass
+        df = pd.read_csv("/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        data = ProcessData("SIEDCO","/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        df_input = data.add_timestamp(df)
+        date = '2018-01-01'
+        dataset_dict = data.dataset_dict
+        df_filtered = ProcessData.filter_by_date(df_input,dataset_dict,date,date)
+
+        timed_pts,region = ProcessData.get_time_space_points(df_filtered, data.dataset_dict)
+        counting_kernel = open_cp.naive.CountingGridKernel(grid_width=150, region=region)
+        counting_kernel.data = timed_pts
+        grid_prediction = counting_kernel.predict()
+
+        coverages = [2,4,6,8,10]
+        hit_rates = prediction_metrics.measure_hit_rates(grid_prediction,timed_pts,coverages,'default')
+        self.assertEqual(hit_rates, {2: 1.0, 4: 1.0, 6: 1.0, 8: 1.0, 10: 1.0})
 
     def test_hit_rate_default_2(self):
         """ Test hit_rate=0 if no events falls on hotspots """
-        pass
+        df = pd.read_csv("/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        data = ProcessData("SIEDCO","/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        df_input = data.add_timestamp(df)
+        date = '2018-01-01'
+        dataset_dict = data.dataset_dict
+        df_input= ProcessData.filter_by_date(df_input,dataset_dict,date,date)
+        df_1= ProcessData.filter_by_field(df_input,'LOCALIDAD','SUBA')
+        df_2= ProcessData.filter_by_field(df_input,'LOCALIDAD','BOSA')
+
+        timed_pts,region = ProcessData.get_time_space_points(df_1, data.dataset_dict)
+        counting_kernel = open_cp.naive.CountingGridKernel(grid_width=150, region=region)
+        counting_kernel.data = timed_pts
+        grid_prediction = counting_kernel.predict()
+
+        coverages = [2,4,6,8,10]
+        eval_pts,_ = ProcessData.get_time_space_points(df_2, data.dataset_dict)
+        hit_rates = prediction_metrics.measure_hit_rates(grid_prediction,eval_pts,coverages,'default')
+        self.assertEqual(hit_rates, {2: 0.0, 4: 0.0, 6: 0.0, 8: 0.0, 10: 0.0})
 
     def test_hit_rate_default_3(self):
         """ Test based on Candelaria scenario """
-        pass
+        csv_path = '/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv'
+        siedco_info = {'name':'SIEDCO','path':csv_path}
+        train_dates = {'initial':'2018-03-01','final':'2018-09-30'}
+        validation_dates = {'initial':'2018-10-03','final':'2018-10-03'}
+        model = "SEPPexp"
+        metrics = ''
+        aggregation = ''
+        filter_localidad = {'field':'LOCALIDAD','value':'CANDELARIA'}
+        localidad_experiment = PredictionExperiment(dataset_info=siedco_info, custom_filter=filter_localidad,train_dates=train_dates, validation_dates=validation_dates, model=model,metrics='',aggregation_data='')
+        prediction_results = localidad_experiment.run_ncv_experiment(time_unit='',grid_size=150, region=None)
+
+        df_siedco = pd.DataFrame(prediction_results, columns =['initial-date','final-date','prediction','eval_pts'])
+        coverages = [2,4,6,8,10]
+        grid_prediction_1 = df_siedco.prediction.values[1]
+        eval_pts_1 = df_siedco.eval_pts.values[1]
+        grid_prediction_2 = df_siedco.prediction.values[2]
+        eval_pts_2 = df_siedco.eval_pts.values[2]
+        hit_rates_1 = prediction_metrics.measure_hit_rates(grid_prediction_1,eval_pts_1,coverages,'default')
+        hit_rates_2 = prediction_metrics.measure_hit_rates(grid_prediction_2,eval_pts_2,coverages,'default')
+        self.assertEqual(hit_rates_1, {2: -1.0, 4: -1.0, 6: -1.0, 8: -1.0, 10: -1.0})
+        self.assertEqual(hit_rates_2, {2: 0.0, 4: 0.0, 6: 0.0, 8: 1.0, 10: 1.0})
 
     def test_hit_rate_ground_truth_1(self):
         """ Test hit_rate=1 if all real events falls on hotspots """
@@ -82,5 +131,14 @@ class TestCase(unittest.TestCase):
         self.assertEqual(mse_method_1, mse_method_2)
 
     def test_mse_1(self):
-        """ Test mse=0 if both matrices are equal """
-        pass
+        """ Test mse=0 if both matrices (prediction and ground truth) are equal """
+        df = pd.read_csv("/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        data = ProcessData("SIEDCO","/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
+        df_input = data.add_timestamp(df)
+        timed_pts,region = ProcessData.get_time_space_points(df_input, data.dataset_dict)
+
+        counting_kernel = open_cp.naive.CountingGridKernel(grid_width=150, region=region)
+        counting_kernel.data = timed_pts
+        grid_prediction = counting_kernel.predict()
+        mse = prediction_metrics.mse(grid_prediction,timed_pts)
+        self.assertEqual(mse, 0)
