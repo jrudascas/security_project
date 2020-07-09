@@ -1,6 +1,11 @@
 import numpy as _np
 import open_cp
 from open_cp import evaluation
+import sklearn
+from sklearn.metrics import mean_squared_error
+
+from services.process_data import ProcessData
+
 
 def hit_counts_ground_truth(grid_pred, timed_points, percentage_coverage):
     """percentage_coverage is used as a top restriction, but hit rates are
@@ -30,6 +35,17 @@ def hit_counts_ground_truth(grid_pred, timed_points, percentage_coverage):
         out[coverage] = (count, len(timed_points.xcoords))
     return out
 
+def make_counting_grid(grid_pred, timed_points):
+    """ Use naive counting predictor as proxy to compute the counting
+        matrix of ground truth events.
+    """
+    counting_kernel = open_cp.naive.CountingGridKernel(grid_pred.xsize,
+                                                       grid_pred.ysize,
+                                                       grid_pred.region())
+    counting_kernel.data = timed_points
+    counting_matrix = counting_kernel.predict()
+    return counting_matrix
+
 def measure_hit_rates(prediction, real_events, coverages, method):
     """ This is a true positives measure.
     """
@@ -44,3 +60,18 @@ def measure_hit_rates(prediction, real_events, coverages, method):
         out = hit_counts_ground_truth(prediction, real_events, coverages)
 
     return {k : a/b for k, (a,b) in out.items()}
+
+def mse(grid_pred, real_events):
+    """ Computes the "mean aquared error" between the prediction and the ground
+        truth. Is computed as the sum of each cell squared difference.
+
+    :param grid_pred: An instance of :class:`GridPrediction` matrix attribute
+                      must be normalized.
+    :param real_events: An instance of :class: open_cep.data.TimedPoints
+
+    :return: A non-negative floating point value
+    """
+
+    counting_matrix = make_counting_grid(grid_pred, real_events)
+    counting_matrix._matrix = ProcessData.normalize_matrix(counting_matrix._matrix)
+    return mean_squared_error(grid_pred._matrix, counting_matrix._matrix)
