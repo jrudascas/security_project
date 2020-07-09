@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import numpy as np
 import open_cp
-import matplotlib.pyplot as plt
 
 from services.aggressive_model import NaiveCounting, SpaceTimeKDE, SEPPexp, SEPPexpWeekDay
 from services.process_data import ProcessData
@@ -64,11 +63,6 @@ class ValidateModel:
                                                                    trained_model)
             average_prediction = ValidateModel.interval_average_prediction(prediction_by_hour)
 
-            # TODO: move plot outside this service
-            #prediction_interval = {'initial':initial_prediction_datetime,
-            #                       'final':final_prediction_datetime}
-            #ValidateModel.plot_grid_prediction(average_prediction, eval_pts, prediction_interval)
-
             element = np.array([initial_prediction_datetime,
                                 final_prediction_datetime,
                                 average_prediction,
@@ -77,15 +71,6 @@ class ValidateModel:
                                                                     prediction_results,
                                                                     element)
         return prediction_results
-
-    def plot_grid_prediction(grid_prediction, real_events, prediction_interval):
-        fig, ax = plt.subplots(figsize=(10,10))
-        m = ax.pcolor(*grid_prediction.mesh_data(), grid_prediction.intensity_matrix)
-        if not real_events:
-            pass
-        else:
-            ax.scatter(real_events.xcoords, real_events.ycoords, marker="+", color="white")
-        ax.set_title(str(prediction_interval['initial'])+' to '+str(prediction_interval['final']))
 
     def interval_average_prediction(prediction_array):
         xoffset_avg = sum([p._xoffset for p in prediction_array]) / len(prediction_array)
