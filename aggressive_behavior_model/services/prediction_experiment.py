@@ -33,38 +33,30 @@ class PredictionExperiment:
         #check data available for validation/test (e.g., final training date is the last on the defined DB)
         pass
 
-    def run_ncv_experiment(self, time_unit, grid_size, outer_iterations):
-        """run nested-cross validation"""
+    def run_ncv_experiment(self, time_unit, grid_size, region):
+        """ Run nested-cross validation
+
+        :region: An instance of :class: open_cp.data.RectangularRegion,
+                 if 'None', the region will dfined based on training points
+
+        :return: An array with prediction results
+        """
+
         self.check_exp_params()
         data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
         df = data.get_formated_df()
         self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
         dates_interval = {'initial': self.train_dates['initial'], 'final': self.validation_dates['final']}
         df_train_validation = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, dates_interval)
-        region = None
-        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations, region)
+        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, region)
         prediction_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.validation_dates, self.metrics)
         return prediction_results
 
-    def run_ncv_experiment_region(self, time_unit, grid_size, region):
-        # TODO: refactor with previous method (run_ncv_experiment)
-        """run nested-cross validation"""
-        self.check_exp_params()
-        data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
-        df = data.get_formated_df()
-        self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
-        dates_interval = {'initial': self.train_dates['initial'], 'final': self.validation_dates['final']}
-        df_train_validation = ProcessData.select_data(df, self.dataset_info['dict'], self.custom_filter, dates_interval)
-        outer_iterations = ''
-        validation = ValidateModel(df_train_validation, self.dataset_info['dict'], time_unit, outer_iterations, region)
-        prediction_results = validation.walk_fwd_chain(self.model, grid_size, self.train_dates, self.validation_dates, self.metrics)
-        return prediction_results
-
-    def run_single_validation(self, grid_size, validation_date, time_unit, outer_iterations):
+    def run_single_validation(self, grid_size, validation_date, time_unit):
         data = ProcessData(self.dataset_info['name'], self.dataset_info['path'])
         df = data.get_formated_df()
         self.dataset_info['dict'] = data.dataset_dict #update dataset dictionary on experiment instance
         df_filtered = ProcessData.filter_by_field(df, self.custom_filter['field'], self.custom_filter['value'])
-        validation = ValidateModel(df_filtered, self.dataset_info['dict'], time_unit, outer_iterations)
+        validation = ValidateModel(df_filtered, self.dataset_info['dict'], time_unit, None)
         prediction_results = validation.inner_loop_validation(self.model, grid_size, self.train_dates, datetime.strptime(validation_date,'%Y-%m-%d'), self.metrics)
         return prediction_results

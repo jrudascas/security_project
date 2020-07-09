@@ -8,11 +8,10 @@ from services.process_data import ProcessData
 
 class ValidateModel:
 
-    def __init__(self, df_train_validation, dataset_dict, time_unit, outer_iterations, region):
+    def __init__(self, df_train_validation, dataset_dict, time_unit, region):
         self.df_train_validation = df_train_validation
         self.dataset_dict = dataset_dict
         self.time_unit = time_unit
-        self.outer_iterations = outer_iterations
         self.region = region
 
     def check_validation_params(self):
