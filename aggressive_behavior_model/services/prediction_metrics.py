@@ -67,11 +67,11 @@ def mse(grid_pred, real_events):
 
     :param grid_pred: An instance of :class:`GridPrediction` matrix attribute
                       must be normalized.
-    :param real_events: An instance of :class: open_cep.data.TimedPoints
+    :param real_events: An instance of :class: open_cp.data.TimedPoints
 
     :return: A non-negative floating point value
     """
-
+    grid_pred._matrix = ProcessData.normalize_matrix(grid_pred._matrix)
     counting_matrix = make_counting_grid(grid_pred, real_events)
     counting_matrix._matrix = ProcessData.normalize_matrix(counting_matrix._matrix)
     return mean_squared_error(grid_pred._matrix, counting_matrix._matrix)
