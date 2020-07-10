@@ -15,7 +15,7 @@ from services import prediction_metrics
 
 class TestCase(unittest.TestCase):
 
-    def test_hit_rate_default_1(self):
+    def test_hit_rate_1(self):
         """ Test hit_rate=1 if all real events falls on hotspots """
         df = pd.read_csv("/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
         data = ProcessData("SIEDCO","/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
@@ -30,10 +30,12 @@ class TestCase(unittest.TestCase):
         grid_prediction = counting_kernel.predict()
 
         coverages = [2,4,6,8,10]
-        hit_rates = prediction_metrics.measure_hit_rates(grid_prediction,timed_pts,coverages,'default')
-        self.assertEqual(hit_rates, {2: 1.0, 4: 1.0, 6: 1.0, 8: 1.0, 10: 1.0})
+        hit_rates_default = prediction_metrics.measure_hit_rates(grid_prediction,timed_pts,coverages,'default')
+        hit_rates_ground_truth = prediction_metrics.measure_hit_rates(grid_prediction,timed_pts,coverages,'ground_truth_coverage')
+        self.assertEqual(hit_rates_default, {2: 1.0, 4: 1.0, 6: 1.0, 8: 1.0, 10: 1.0})
+        self.assertEqual(hit_rates_ground_truth, {0.46187915216703573: 1.0})
 
-    def test_hit_rate_default_2(self):
+    def test_hit_rate_2(self):
         """ Test hit_rate=0 if no events falls on hotspots """
         df = pd.read_csv("/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
         data = ProcessData("SIEDCO","/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv")
@@ -51,11 +53,13 @@ class TestCase(unittest.TestCase):
 
         coverages = [2,4,6,8,10]
         eval_pts,_ = ProcessData.get_time_space_points(df_2, data.dataset_dict)
-        hit_rates = prediction_metrics.measure_hit_rates(grid_prediction,eval_pts,coverages,'default')
-        self.assertEqual(hit_rates, {2: 0.0, 4: 0.0, 6: 0.0, 8: 0.0, 10: 0.0})
+        hit_rates_default = prediction_metrics.measure_hit_rates(grid_prediction,eval_pts,coverages,'default')
+        hit_rates_ground_truth = prediction_metrics.measure_hit_rates(grid_prediction,eval_pts,coverages,'ground_truth_coverage')
+        self.assertEqual(hit_rates_default, {2: 0.0, 4: 0.0, 6: 0.0, 8: 0.0, 10: 0.0})
+        self.assertEqual(hit_rates_ground_truth, {0.6632653061224489: 0.0})
 
-    def test_hit_rate_default_3(self):
-        """ Test based on Candelaria scenario """
+    def test_hit_rate_3(self):
+        """ Test hit rate based on Candelaria scenario """
         csv_path = '/Users/anamaria/Desktop/dev/security_project/datasets/deduplicate_siedco_09062020.csv'
         siedco_info = {'name':'SIEDCO','path':csv_path}
         train_dates = {'initial':'2018-03-01','final':'2018-09-30'}
@@ -73,25 +77,18 @@ class TestCase(unittest.TestCase):
         eval_pts_1 = df_siedco.eval_pts.values[1]
         grid_prediction_2 = df_siedco.prediction.values[2]
         eval_pts_2 = df_siedco.eval_pts.values[2]
-        hit_rates_1 = prediction_metrics.measure_hit_rates(grid_prediction_1,eval_pts_1,coverages,'default')
-        hit_rates_2 = prediction_metrics.measure_hit_rates(grid_prediction_2,eval_pts_2,coverages,'default')
-        self.assertEqual(hit_rates_1, {2: -1.0, 4: -1.0, 6: -1.0, 8: -1.0, 10: -1.0})
-        self.assertEqual(hit_rates_2, {2: 0.0, 4: 0.0, 6: 0.0, 8: 1.0, 10: 1.0})
+        hit_rates_default_1 = prediction_metrics.measure_hit_rates(grid_prediction_1,eval_pts_1,coverages,'default')
+        hit_rates_default_2 = prediction_metrics.measure_hit_rates(grid_prediction_2,eval_pts_2,coverages,'default')
+        hit_rates_ground_truth_1 = prediction_metrics.measure_hit_rates(grid_prediction_1,eval_pts_1,coverages,'ground_truth_coverage')
+        hit_rates_ground_truth_2 = prediction_metrics.measure_hit_rates(grid_prediction_2,eval_pts_2,coverages,'ground_truth_coverage')
 
-    def test_hit_rate_ground_truth_1(self):
-        """ Test hit_rate=1 if all real events falls on hotspots """
-        pass
-
-    def test_hit_rate_ground_truth_2(self):
-        """ Test hit_rate=0 if no events falls on hotspots """
-        pass
-
-    def test_hit_rate_ground_truth_3(self):
-        """ Test based on Candelaria scenario """
-        pass
+        self.assertEqual(hit_rates_default_1, {2: -1.0, 4: -1.0, 6: -1.0, 8: -1.0, 10: -1.0})
+        self.assertEqual(hit_rates_default_2, {2: 0.0, 4: 0.0, 6: 0.0, 8: 1.0, 10: 1.0})
+        self.assertEqual(hit_rates_ground_truth_1, {2: -1.0, 4: -1.0, 6: -1.0, 8: -1.0, 10: -1.0})
+        self.assertEqual(hit_rates_ground_truth_2, {0.7692307692307693: 0.0})
 
     def test_make_counting_grid(self):
-        """ Test for a base "well-known" scenario """
+        """ Test counting grid for a base "well-known" scenario """
         ## Get grid prediction, to use size and region params
         infile = open('/Users/anamaria/Desktop/dev/security_project/aggressive_behavior_model/pkl/experiment_seppexp_10_2_siedco_prediction.pkl','rb')
         loaded_siedco = pickle.load(infile)
