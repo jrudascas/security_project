@@ -1,8 +1,10 @@
-import pandas as pd
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import numpy as np
+import open_cp
+import pandas as pd
 import pickle
 import pyproj
-import open_cp
 import warnings
 
 siedco_dict = {
@@ -50,6 +52,15 @@ class ProcessData:
             df['TIME_STAMP']=pd.to_datetime(df[dataset_dict['date']]+ ' '+df[dataset_dict['time']])
             self.dataset_dict['time_stamp'] = 'TIME_STAMP'
         return df
+
+    def fill_array(flag, array, element):
+        if flag==True:
+            flag = False
+            array = element
+        else:
+            array = np.vstack((array, element))
+
+        return flag, array
 
     def filter_by_date(df, dataset_dict, initial_date, final_date):
         time_stamp_field = dataset_dict['time_stamp']
@@ -127,6 +138,22 @@ class ProcessData:
         except FileNotFoundError as err:
             raise FileNotFoundError("Error loading csv, file not found.")
         return df
+
+    def normalize_matrix(matrix_array):
+        matrix_array = matrix_array.astype(float)
+        matrix_array *= 1/matrix_array.max()
+        return matrix_array
+
+    def plot_grid_prediction(grid_prediction, real_events, prediction_interval):
+        fig, ax = plt.subplots(figsize=(10,10))
+        m = ax.pcolor(*grid_prediction.mesh_data(), grid_prediction.intensity_matrix,
+                      cmap ='Blues', vmin=grid_prediction.intensity_matrix.min(),
+                      vmax = grid_prediction.intensity_matrix.max())
+        if not real_events:
+            pass
+        else:
+            ax.scatter(real_events.xcoords, real_events.ycoords, marker=".", color="black")
+        ax.set_title(str(prediction_interval['initial'])+' to '+str(prediction_interval['final']))
 
     def save_element(path, file_name, element):
         outfile = open(path+file_name+'.pkl','wb')
