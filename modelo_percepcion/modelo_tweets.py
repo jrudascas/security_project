@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 from scipy.optimize import minimize
 from datetime import datetime, timedelta
 import pickle
+from scipy import stats
+
 
 #----------------------------------------------------------------------------------------
 
@@ -345,18 +347,30 @@ def lambda_t(t,beta,f_cov,keys_tweets,Tweets,kernel,fun,followers_rate):
 
 def get_tweets_from_lambda(Lt,t):
     dt=(t[-1]-t[0])/len(t)
-    return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':(Lt*dt)[:-1]})  
+    return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':(Lt*dt)[:-1]}) 
 
-def thinning_pred(lamda_fun,t):
+def interpolate_T(T,pre_lamda,t):
+    index_low=np.where((t <= T) == True)[0][0]
+    index_up=np.where((t >= T) == True)[0][0]
+    if index_low == index_up:
+        lamda=pre_lamda[index_low]
+    else:
+        lamda=np.interp(T,[t[index_low],t[index_up]],
+                  [pre_lamda[index_low],pre_lamda[index_up]])
+    return lamda
+
+def thinning_pred(pre_lamda,t):
     samples=[]
     T=t[0]
     while T <= t[-1]:
-        lamda = lamda_fun(T)
+        lamda=interpolate_T(T,pre_lamda,t)
         mu = np.random.uniform()
         Tau = -np.log(mu)/lamda
         T=T+Tau
+        if T >= t[-1]:
+            break
         s = np.random.uniform()
-        if s <= lamda_fun(T)/lamda:
+        if s <= interpolate_T(T,pre_lamda,t)/lamda:
             samples.append(T)
             
     CT = count_tweets(samples,t)
@@ -405,6 +419,8 @@ def tweets_for_interval(interval,Tweets,t_start,t_end):
     else:
         print("El intervalo de tiempo dado no esta contenido en los Tweets")
         return total
+    
+
 #----------------------------------------------------------------------------------------
 class modelTweets:
     def __init__(self, data,
@@ -473,6 +489,7 @@ class modelTweets:
         self.real_tweets_validate=real_tweets(self.keys_validation,self.Tweets,self.t_pred)
         
     def compute_Beta(self,beta_0=np.array([1,1,1])):
+        beta_0=np.zeros_like(self.f_covariates(0))
         self.Beta=Beta(self.train_start,self.train_end,
                         self.keys_train_in,self.Tweets,
                         self.f_covariates,self.win_size_for_partition_cov,
@@ -524,7 +541,7 @@ class modelTweets:
         if self.method_pred == 'integral':
             self.Tweets_est_train=get_tweets_from_lambda(self.lambda_train, self.t_train)
         elif self.method_pred == 'thinning':
-            self.Tweets_est_train=thinning_pred(self.compute_lamda_train_point,self.t_train)
+            self.Tweets_est_train=thinning_pred(self.lambda_train,self.t_train)
         else:
             return "Metodo de predicción invalido"
         
@@ -557,13 +574,46 @@ class modelTweets:
         if self.method_pred == 'integral':
             self.Tweets_pred=get_tweets_from_lambda(self.lambda_predict, self.t_pred)
         elif self.method_pred == 'thinning':
-            self.Tweets_pred=thinning_pred(self.compute_lamda_predict_point,self.t_pred)
+            self.Tweets_pred=thinning_pred(self.lambda_predict,self.t_pred)
         else:
             return "Metodo de predicción invalido"
         
         
         return self.lambda_predict,self.Tweets_pred
     
+    def compute_errors(self):
+        ###
+        real=self.real_tweets_validate.Tweets.values
+        predict=self.Tweets_pred.Tweets.values
+        diff=abs(real-predict)
+        
+        self.errors_predict={}
+        ##
+        self.errors_predict['APE']=diff/real
+        self.errors_predict['MAPE']=self.errors_predict['APE'].mean()
+        self.errors_predict['MSE']=(diff**2).mean()
+        self.errors_predict['MAE']=diff.mean()
+        self.errors_predict['RMSE']=np.sqrt((diff**2).mean())
+        self.errors_predict['Pearson']=stats.pearsonr(real,predict)        
+        self.errors_predict['kendall']=stats.kendalltau(real,predict)
+        
+        real=np.cumsum(real)
+        predict=np.cumsum(predict)
+        diff=abs(real-predict)
+        
+        self.errors_predict_cum={}
+        ##
+        self.errors_predict_cum['APE']=diff/real
+        self.errors_predict_cum['MAPE']=self.errors_predict_cum['APE'].mean()
+        self.errors_predict_cum['MSE']=(diff**2).mean()
+        self.errors_predict_cum['MAE']=diff.mean()
+        self.errors_predict_cum['RMSE']=np.sqrt((diff**2).mean())
+        self.errors_predict_cum['Pearson']=stats.pearsonr(real,predict)        
+        self.errors_predict_cum['kendall']=stats.kendalltau(real,predict)
+        
+        return self.errors_predict,self.errors_predict_cum
+        
+        
         
     def train(self,beta_0=np.array([1,1,1])):
         self.compute_Beta(beta_0)
