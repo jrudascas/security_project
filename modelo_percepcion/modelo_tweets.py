@@ -67,24 +67,63 @@ def integral_zhao(x1, x2, s0=300/3600, theta=0.242):
 #----------------------------------------------------------------------------------------
 
 def T_c(t):
+    """
+    Funcion ejemplo covariados
+    Dada una fecha en datetime devuelve un vector con sus valores de 
+    covariados.
+    """
     return np.array([t.weekday()/6.0,(t.hour > 12)*1,1])
 
 
 def date_to_hours(date,f_inicio):
+    """
+    Calcula la cantidad de horas que hay entre una fecha dada y una fecha inicial.
+    
+    :param date: fecha en formato datetime
+    :param f_inicio: fecha inicial en datetime
+    :return: horas entre las fechas formato int
+    """
+    
     date = datetime.fromisoformat(date)
     hours = (date-f_inicio).total_seconds()/3600
     return hours
 
 def restore_date(t,f_inicio):
+    """
+    Restaura la fecha original de un evento a partir de una fecha inicial y 
+    el tiempo en horas transcurrido.
+    
+    :param t: tiempo en horas int
+    :param f_inicio: fecha inicial en datetime
+    :return: fecha original
+    """
     return f_inicio+timedelta(hours=t)
 
 def compare_vectors(a,b):
+    """
+    Establece si dos vectores (np.array) son iguales
+    
+    :param a: primer vector
+    :param b: segundo vector
+    :return: True si son iguales y False en caso contrario
+    """
     if np.linalg.norm(abs(a-b)) == 0:
         return True
     else:
         return False
 
 def get_particion(inicio,fin,f_covariados,win_size=1):
+    """
+    Calcula los tamanos y puntos medios de la particion generada 
+    en un intervalo por los valores de sus covariados.
+    
+    :param inicio: tiempo en horas del inicio del intervalo a evaluar
+    :param fin: tiempo en horas del fin del intervalo a evaluar
+    :param f_covariados: funcion de covariados
+    :param win_size: saltos para evaluacion nuevos intervalos
+    :return: lista de longitud intervalos de la particion y 
+             puntos medios de esta (np.array)
+    """
 
     particion=[]
     particion.append(inicio)
@@ -106,6 +145,15 @@ def get_particion(inicio,fin,f_covariados,win_size=1):
 ## Calculo de Beta
 
 def beta_left_hand(keys_train,Tweets,f_covariados):
+    """
+    Calcula la parte izquierda de la ecuacion a resover de beta a partir de
+    los tweets originales y sus covariados temporales
+    
+    :param keys_train: lista de keys de los tweets que se tienen en cuenta
+    :param Tweets: diccionario con la informacion de los tweets
+    :param f_covariados: funcion de covariados
+    :return: vector resultante 
+    """
     left_hand=np.zeros_like(f_covariados(0))
     for i in keys_train:
         t_0=Tweets[i]['times'][0]        
@@ -114,22 +162,63 @@ def beta_left_hand(keys_train,Tweets,f_covariados):
 
 
 def to_solve(beta,particion,left_hand,f_covariados):
+    """
+    Calcula la diferencia entre la parte izquierda y derecha de la ecuacion
+    para establecer Beta
+    
+    :param beta: valor inicial de beta (np.array)
+    :param particion: particion precalculada
+    :param left_hand: valor parte izquierda precalculada
+    :param f_covariados: funcion de covariados
+    :return: vector resultante diferencia
+    """    
     l_particion,v_particion=particion
     right_hand=(l_particion.reshape((len(l_particion),1))*np.array([f_covariados(t)*np.exp(beta*f_covariados(t)) for t in v_particion])).sum(axis=0)
     return right_hand-left_hand
 
     
 def get_beta(beta_0,particion,left_hand,f_covariados):
+    """
+    Determina el valor de beta optimo para los datos
+    
+    :param beta_0: valor inicial de beta (np.array)
+    :param particion: particion precalculada
+    :param left_hand: valor parte izquierda precalculada
+    :param f_covariados: funcion de covariados
+    :return: vector Beta optimo
+    """        
     return minimize(lambda x: np.linalg.norm(to_solve(x,particion,left_hand,f_covariados)),
                     x0=beta_0,
                     method='Nelder-Mead').x
 
 def Beta(inicio,time_observed,keys_start_in,Tweets,f_covariados,win_size=1,beta_0=np.array([1,1,1])):
+    """
+    Determina el valor de beta optimo para los datos datos sin hacer precalculos de
+    los valores intermedios
+    
+    :param inicio: tiempo en horas donde se quiere iniciar el calculo de beta
+    :param time_observed: tiempo en horas donde se quiere terminar el calculo de beta
+    :param keys_start_in: lista de keys de tweets que se tienen en consideracion
+    :param Tweets: diccionario con la informacion de los tweets
+    :param f_covariados: funcion de covariados
+    :param win_size: saltos para evaluacion nuevos intervalos para funcion particion
+    :param beta_0: valor inicial de beta (np.array)
+    :return: vector Beta optimo
+    """  
     left_hand=beta_left_hand(keys_start_in,Tweets,f_covariados)
     particion=get_particion(inicio,time_observed,f_covariados,win_size=win_size)
     return get_beta(beta_0,particion,left_hand,f_covariados)
 
 def back_ground(beta,t,f_covariados):
+    """
+    Calcula los valores de background para un beta, intervalo de tiempo y funcion
+    de covariados dado
+    
+    :param beta: vector Beta dado
+    :param t: intervalo de tiempo
+    :param f_covariados: funcion de covariados
+    :return: vector valores background
+    """     
     return [np.exp(np.dot(beta,f_covariados(i))) for i in t]
     
 #----------------------------------------------------------------------------------------
@@ -216,9 +305,28 @@ def estimate_infectious_rate_vec(event_times, follower, kernel_integral=integral
     return values,time_x[:len(values)]
 
 def sigmoid_foll(foll,exp=2):
+    """
+    Normaliza valores de seguidores 
+    
+    :param foll: vector seguidores
+    :param exp: umbral de normalizacion
+    :return: vector seguidores normalizado
+    """    
     return 2/(1+np.exp(-10**(-exp)*foll))-1
 
 def compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral=integral_zhao,followers_rate=2,win_size=4):
+    """
+    Calcula los valores estimados de la tasa de infeccion para los tweets en el tiempo observado
+    
+    
+    :param time_observed: tiempo observado en horas
+    :param keys_tweets: lista de keys de tweets que estan en el tiempo observado
+    :param Tweets: diccionario de tweets
+    :param kernel_integral: funcion de la integral del kernel utilizado
+    :param followers_rate: funcion de la integral del kernel utilizado
+    :param win_size: longitud ventanas temporales supuesto constantes
+    :return: diccionario indexado por las keys de los tweets que contiene los valores estimados y los valores de los tiempos
+    """    
     p_est={}
     for i in keys_tweets:
         tweet=Tweets[i]
@@ -293,6 +401,15 @@ def error_infectious_rate(estimated,param_fitted,fun,p0_vec):
     '''
     WMAPE  --- MAE
     '''
+    """
+    Calculo error entre los valores estimados y los resultantes usando la formula ajustada de la tasa de infeccion
+
+    :param estimates: estimated values of function
+    :param param_fitted: fitted parameters of fuction
+    :param fun: infectious rate function
+    :param p0_vec: p0 vector of each tweet
+    :return: WMAPE calculus
+    """
     total_estimated=[]
     total_fitted=[]
     for i in estimated:
@@ -312,6 +429,11 @@ def get_infectious_rate_fitted(time_observed,
                                followers_rate=2,
                                win_size=4
                               ):
+    """
+    Calculo tasa de infeccion por la formula y los parametros ajustados
+
+    :return: lista parametros ajustados, funcion resultante , error de ajuste
+    """
     p_est=compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral,followers_rate,win_size)
     p0_vec={}
     for i in p_est:
@@ -322,6 +444,11 @@ def get_infectious_rate_fitted(time_observed,
     return param_fit,fun_fit,error_infectious
 #----------------------------------------------------------------------------------------
 def input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate):
+    """
+    Calculo aporte de los valores de las replicas en la funcion lambda
+
+    :return: lista valores replicas para cada instante t
+    """
     replicas=np.zeros_like(t)
     for i in keys_tweets:
         tweet=Tweets[i]
@@ -340,16 +467,31 @@ def input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate):
     return replicas
 
 def lambda_t(t,beta,f_cov,keys_tweets,Tweets,kernel,fun,followers_rate):
+    """
+    Calculo valores de la funcion intensidad dado sus parametros y los instantes de tiempo a calcular
+
+    :return: lista valores funcion intensidad
+    """
     back_g=back_ground(beta,t,f_cov)
     replicas=input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate)
     return back_g+replicas
 
 
 def get_tweets_from_lambda(Lt,t):
+    """
+    Calculo cantidad tweets a partir de la intensidad
+
+    :return: tabla tiempos iniciales y finales de los intervalos y cantidad de tweets en cada uno
+    """
     dt=(t[-1]-t[0])/len(t)
     return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':(Lt*dt)[:-1]}) 
 
 def interpolate_T(T,pre_lamda,t):
+    """
+    interpolacion para calcular valores de lamda que no estan en la lista de tiempo predefinida
+
+    :return: valor de lamda hallado por la interpolacion
+    """
     index_low=np.where((t <= T) == True)[0][0]
     index_up=np.where((t >= T) == True)[0][0]
     if index_low == index_up:
@@ -360,6 +502,11 @@ def interpolate_T(T,pre_lamda,t):
     return lamda
 
 def thinning_pred(pre_lamda,t):
+    """
+    metodo de prediccion basado en el calculo de probabilidad de la existencia de eventos
+
+    :return: tabla tiempos iniciales y finales de los intervalos y cantidad de tweets predichos en cada uno
+    """
     samples=[]
     T=t[0]
     while T <= t[-1]:
@@ -377,12 +524,21 @@ def thinning_pred(pre_lamda,t):
     return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':CT})  
 
 def count_tweets(times,intervals):
+    """
+    cuenta los tweets en intervalos dados
+    :return: lista tweets
+    """
+    
     tweets = []
     for i in range(len(intervals)-1):
         tweets+=[get_event_count(times, intervals[i], intervals[i+1])]
     return tweets
         
 def real_tweets(keys_tweets,Tweets,t):
+    """
+    cuenta los tweets reales que aparecen en los datos para un intervalo de tiempo dado
+    :return: tabla tiempos iniciales y finales de los intervalos y cantidad de tweets encontrados en cada uno
+    """
     Total_et=[]
     for i in keys_tweets:
         tweet=Tweets[i]
@@ -395,6 +551,10 @@ def real_tweets(keys_tweets,Tweets,t):
 
 def lambda_pred(t_pred,keys_tweets,Tweets,beta,
                 f_covariados,kernel,kernel_integral,fun,followers_rate,time_observed):
+    """
+    Calculo prediccion intensidad tweets en un intervalo dado
+    :return: lista de valores de la intensidad predicha para los valores temporales del intervalo dado
+    """
     back_g=back_ground(beta,t_pred,f_covariados)
     replicas=input_replicas(t_pred,keys_tweets,Tweets,kernel,fun,followers_rate)
     numerador=back_g+replicas
@@ -423,6 +583,11 @@ def tweets_for_interval(interval,Tweets,t_start,t_end):
 
 #----------------------------------------------------------------------------------------
 class modelTweets:
+    """
+    Clase del modelo de tweets que contiene todas las funciones anteriormente definidas
+    de tal forma que se definen los parametros globales al crear una instancia y las funciones
+    son llamadas sin necesidad de poner explicitamente los parametros adicionales.
+    """
     def __init__(self, data,
                  train_period,
                  val_period,
