@@ -98,17 +98,18 @@ def restore_date(t,f_inicio):
     """    
     return f_inicio+timedelta(hours=t)
 
-def integral_zhao(x1, x2, s0=300/3600, theta=0.242):
+def compare_vectors(a,b):
     """
-    Calculates definite integral of Zhao function.
-
-    :param x1: start
-    :param x2: end
-    :param s0: initial reaction time
-    :param theta: empirically determined constant
-    :return: integral of Zhao function
+    Establece si dos vectores (np.array) son iguales
+    
+    :param a: primer vector
+    :param b: segundo vector
+    :return: True si son iguales y False en caso contrario
     """
-    return kernel_primitive_zhao_vec(x2, s0, theta) - kernel_primitive_zhao_vec(x1, s0, theta)
+    if np.linalg.norm(abs(a-b)) == 0:
+        return True
+    else:
+        return False
 
 def get_particion(inicio,fin,f_covariados,win_size=1):
     
@@ -331,9 +332,10 @@ def estimate_infectious_rate_vec(event_times, follower, kernel_integral=integral
             values=np.trim_zeros(values[:-1])
             
         
-    return np.array(foll[:len(values)])*values,time_x[:len(values)]
+#     return np.array(foll[:len(values)])*values,time_x[:len(values)]
+    return values,time_x[:len(values)]
 
-def sigmoid_foll(foll,exp=2):
+def sigmoid_foll(foll,exp=3):
     """
     Normaliza valores de seguidores 
     
@@ -341,7 +343,10 @@ def sigmoid_foll(foll,exp=2):
     :param exp: umbral de normalizacion
     :return: vector seguidores normalizado
     """     
-    return 2/(1+np.exp(-10**(-exp)*foll))-1
+    #2/(1+np.exp(-10**(-exp)*foll))-1
+    f=foll.copy()
+    f[f>10**exp]=10**exp
+    return f
 
 def compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral=integral_zhao,followers_rate=2,win_size=4):
     """
@@ -362,7 +367,7 @@ def compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral=integral_zhao
         event_times=tweet['times']
         t0=event_times[0]
         S=tweet['sentiment']
-        followers=tweet['followers']#sigmoid_foll(tweet['followers'],followers_rate)
+        followers=sigmoid_foll(tweet['followers'],followers_rate)
         mask= event_times <= time_observed
         p_i_est,t_points=estimate_infectious_rate_vec(event_times[mask], followers[mask], kernel_integral, time_observed,win_size)
         if len(p_i_est) == 0:
@@ -463,7 +468,7 @@ def get_infectious_rate_fitted(time_observed,
                                Tweets,
                                kernel_integral,
                                fun_infectious,
-                               followers_rate=2,
+                               followers_rate=3,
                                win_size=4
                               ):
     """
@@ -493,8 +498,8 @@ def input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate,estimated):
         event_times=tweet['times']
         t0=event_times[0]
         S=(5.0-tweet['sentiment'])/5.0
-        followers=tweet['followers']#sigmoid_foll(tweet['followers'],followers_rate)
-        sum_int=kernel(t.reshape((len(t),1))-event_times).sum(axis=1)
+        followers=sigmoid_foll(tweet['followers'],followers_rate)
+        sum_int=(followers*kernel(t.reshape((len(t),1))-event_times)).sum(axis=1)
         p_t=fun(t,t0=t0,p0=estimated[i][0][0],s=S)
         sum_ext=np.nan_to_num(sum_int*p_t)
         replicas+=sum_ext
@@ -592,8 +597,17 @@ def lambda_pred(t_pred,keys_tweets,Tweets,beta,f_covariados,kernel,kernel_integr
     """    
     back_g=back_ground(beta,t_pred,f_covariados)
     BG_samples=thinning_pred(back_g,t_pred,return_samples=True)
-    
+
     p0_mean=np.mean([estimated[i][0][0] for i in estimated])
+    
+    f_mean=[]
+    for i in keys_tweets:
+        f_mean+=[sigmoid_foll(Tweets[i]['followers'],followers_rate).mean()]
+    hist,bins=np.histogram(np.array(f_mean),density=False,bins=10) 
+    hist=hist/hist.sum()
+    bins=bins[1:]/225+5/9
+    
+    
     sentiments, percent_sen = np.unique([Tweets[i]['sentiment'] for i in keys_tweets],return_counts=True)
     sentiments = (5-sentiments)/5
     percent_sen = percent_sen/percent_sen.sum()
@@ -602,7 +616,8 @@ def lambda_pred(t_pred,keys_tweets,Tweets,beta,f_covariados,kernel,kernel_integr
     for t0 in BG_samples:
         p0=p0_mean
         s=np.random.choice(sentiments,p=percent_sen)
-        sum_.append(fun(t_pred,t0,p0,s))
+        d=np.random.choice(bins,p=hist)
+        sum_.append(d*fun(t_pred,t0,p0,s))
     sum_ = np.array(sum_).sum(axis=0)
     
     int_=kernel_integral(0, t_pred-time_observed)
@@ -655,7 +670,7 @@ class modelTweets:
                  win_size_for_partition_cov=1,
                  followers_rate=2,
                  infectious_rate_base = infectious_rate_tweets_vec,
-                 win_size_infectious_rate = 4,
+                 win_size_infectious_rate = 3,
                  win_size_train_period = 1,
                  win_size_pred_period = 1,
                  method_pred = 'integral',
@@ -711,7 +726,7 @@ class modelTweets:
         self.real_tweets_validate=real_tweets(self.keys_validation,self.Tweets,self.t_pred)
         
     def compute_Beta(self,beta_0=np.array([1,1,1])):
-        beta_0=np.zeros_like(self.f_covariates(0))
+        beta_0=np.ones_like(self.f_covariates(0))
         self.Beta=Beta(self.train_start,self.train_end,
                         self.keys_train_in,self.Tweets,
                         self.f_covariates,self.win_size_for_partition_cov,
@@ -807,10 +822,71 @@ class modelTweets:
         
         return self.lambda_predict,self.Tweets_pred
     
-    def compute_errors(self):
+    def poisson_method(self):
+        import statsmodels.api as sm
+        X=np.array([self.f_covariates(i) for i in self.real_tweets_train.start])
+        y=self.real_tweets_train.Tweets
+        poisson_training_results = sm.GLM(y, X, family=sm.families.Poisson()).fit()
+        X_pred=np.array([self.f_covariates(i) for i in self.real_tweets_validate.start])
+        poisson_predictions = poisson_training_results.get_prediction(X_pred).summary_frame()['mean'].values
+        dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
+        self.poisson_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':poisson_predictions}) 
+        return self.poisson_predictions
+    
+    
+
+    def linear_reg_method(self):
+        
+        def to_mini(alpha):
+            return np.sum(times-alpha,axis=0)
+
+        from scipy.optimize import leastsq
+        back_g=back_ground(self.Beta,self.t_pred,self.f_covariates)
+        BG_samples=thinning_pred(back_g,self.t_pred,return_samples=True)
+        BG_samples=np.array(count_tweets(BG_samples,self.t_pred))
+
+        values=[]
+        dist_RT=[]
+        max_=0
+        for i in self.keys_train_in:
+            CT=count_tweets(self.Tweets[i]['times'],self.t_train)
+            CT=np.cumsum(np.trim_zeros(CT))
+            dist_RT.append(CT[0])    
+            CT=CT/CT[-1]
+            if len(CT)>max_:
+                max_=len(CT)
+            values.append(np.log(CT))
+
+        times=[]
+        for i in values:
+            l=np.zeros(max_)
+            l[:len(i)]=i
+            times.append(l)
+        times=np.array(times)
+        Root = leastsq(to_mini, x0=np.ones(max_))[0]
+        S2=Root/len(times)
+        exp_=np.exp(Root+S2/2)
+        hist,bins=np.histogram(dist_RT,density=False,bins=30) 
+        hist=hist/hist.sum()
+        BG_cum=np.zeros_like(BG_samples)
+        for i,j in enumerate(BG_samples):
+            RT_dist=np.random.choice(bins[1:],size=j,p=hist)
+            A=(RT_dist.reshape((len(RT_dist),1))*exp_).astype(int)
+            A=(A[:,1:]-A[:,:-1]).sum(axis=0)
+            lim_sup=i+len(A)
+            if  lim_sup >= len(BG_samples):
+                lim_sup=len(BG_samples)
+            BG_cum[i:lim_sup]+=A[:lim_sup-i]
+        dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
+        self.linear_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':BG_cum+BG_samples}) 
+        return self.linear_predictions
+    
+    def compute_errors(self,predict=pd.DataFrame(columns=['a'])):
+        if predict.isnull().all().all() == True:
+            predict= self.Tweets_pred
         ###
         real=self.real_tweets_validate.Tweets.values
-        predict=self.Tweets_pred.Tweets.values
+        predict=predict.Tweets.values
         diff=abs(real-predict)
         
         self.errors_predict={}

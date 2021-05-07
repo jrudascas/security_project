@@ -73,6 +73,8 @@ for split in splits:
     results_cum={}
     for j in range(1,7):
         for i in list(itertools.combinations(np.arange(6),j)):
+            print("-"*15)
+            print(train_period,validate_period)
             print(i,np.array(i+(6,)))
             try:
                 func = lambda x: TC(x)[np.array(i+(6,))]
@@ -81,7 +83,7 @@ for split in splits:
                           train_period,
                           validate_period,
                           f_covariates=(func,restore_date),
-                          followers_rate=1,
+                          followers_rate=3,
                           win_size_pred_period=1
                          )
                 model.train()
@@ -92,7 +94,7 @@ for split in splits:
             except:
                 continue
     results_by_split[(train_period,validate_period)]=[results,results_cum]        
-    with open('errors_covariados.pickle', 'wb') as handle:
+    with open('errors_covariados2.pickle', 'wb') as handle:
         pickle.dump(results_by_split, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
 
