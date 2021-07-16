@@ -9,10 +9,7 @@ import geopandas as gpd
 import gmaps
 import gmaps.datasets
 import scipy.stats
-import utils
 import random 
-from scipy.optimize import fsolve
-from scipy.optimize import minimize
 import timeit
 import datetime
 from shapely import wkt
