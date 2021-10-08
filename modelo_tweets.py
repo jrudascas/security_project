@@ -8,6 +8,7 @@ from scipy.optimize import minimize
 from datetime import datetime, timedelta
 import pickle
 from scipy import stats
+import logging
 
 
 #----------------------------------------------------------------------------------------
@@ -15,8 +16,6 @@ from scipy import stats
 '''
 Funciones relacionadas al kernel
 '''
-
-
 def kernel_zhao_vec(s, s0=300/3600, theta=0.242):
     """
     Calculates Zhao kernel for given value.
@@ -35,7 +34,9 @@ def kernel_zhao_vec(s, s0=300/3600, theta=0.242):
         res[s > s0] = c0 * (res[s > s0] / s0) ** (-(1.0+theta))
         return res
     except:
-        print("Error calculo kernel")
+        msg_error="No se completo operación en la funcion  kernel_zhao_vec"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def kernel_primitive_zhao_vec(x, s0=300/3600, theta=0.242):
     """
@@ -56,7 +57,9 @@ def kernel_primitive_zhao_vec(x, s0=300/3600, theta=0.242):
         res[x > s0] = s0*c0*(1.0+1.0/theta*(1-(res[x > s0]/s0)**-theta))
         return res
     except:
-        print("Error calculo integral kernel")
+        msg_error="No se completo operación en la funcion  kernel_primitive_zhao_vec"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def integral_zhao(x1, x2, s0=300/3600, theta=0.242):
     """
@@ -71,7 +74,9 @@ def integral_zhao(x1, x2, s0=300/3600, theta=0.242):
     try:
         return kernel_primitive_zhao_vec(x2, s0, theta) - kernel_primitive_zhao_vec(x1, s0, theta)
     except:
-        print("Error calculo integral kernel")
+        msg_error="No se completo operación en la funcion  integral_zhao"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 #----------------------------------------------------------------------------------------
 
@@ -81,7 +86,12 @@ def T_c(t):
     Dada una fecha en datetime devuelve un vector con sus valores de 
     covariados.
     """    
-    return np.array([t.weekday()/6.0,(t.hour > 12)*1,1])
+    try:
+        return np.array([t.weekday()/6.0,(t.hour > 12)*1,1])
+    except:
+        msg_error="No se completo operación en la funcion  T_c"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 
 def date_to_hours(date,f_inicio):
@@ -97,7 +107,9 @@ def date_to_hours(date,f_inicio):
         hours = (date-f_inicio).total_seconds()/3600
         return hours
     except:
-        print("Error conversion fechas a horas")
+        msg_error="No se completo operación en la funcion  date_to_hours"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def restore_date(t,f_inicio):
     """
@@ -111,7 +123,9 @@ def restore_date(t,f_inicio):
     try:
         return f_inicio+timedelta(hours=t)
     except:
-        print("Error restauracion fechas")
+        msg_error="No se completo operación en la funcion  restore_date"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def compare_vectors(a,b):
     """
@@ -127,7 +141,9 @@ def compare_vectors(a,b):
         else:
             return False
     except:
-        print("Error comparacion vectores")
+        msg_error="No se completo operación en la funcion  compare_vectors"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 def get_particion(inicio,fin,f_covariados,win_size=1):
     
     """
@@ -157,7 +173,9 @@ def get_particion(inicio,fin,f_covariados,win_size=1):
             pares=np.array(list(zip(particion[:-1],particion[1:])))
         return pares[:,1]-pares[:,0],pares.sum(axis=1)/2
     except:
-        print("Error calculo particion")
+        msg_error="No se completo operación en la funcion  get_particion"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 
 #----------------------------------------------------------------------------------------
@@ -180,7 +198,9 @@ def beta_left_hand(keys_train,Tweets,f_covariados):
             left_hand+=f_covariados(t_0)
         return left_hand
     except:
-        print("Error calculo beta parte izq")
+        msg_error="No se completo operación en la funcion  beta_left_hand"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 
 def to_solve(beta,particion,left_hand,f_covariados):
@@ -202,7 +222,9 @@ def to_solve(beta,particion,left_hand,f_covariados):
         right_hand=(Ti.reshape((len(Ti),1))*T_i).sum(axis=0)
         return right_hand-left_hand
     except:
-        print("Error calculo Beta funcion solve")
+        msg_error="No se completo operación en la funcion  to_solve"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
     
 def get_beta(beta_0,particion,left_hand,f_covariados):
@@ -227,7 +249,9 @@ def get_beta(beta_0,particion,left_hand,f_covariados):
         print(np.linalg.norm(to_solve(result,particion,left_hand,f_covariados)))
         return result
     except:
-        print("Error calculo Beta funcion get_beta")
+        msg_error="No se completo operación en la funcion  get_beta"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def Beta(inicio,time_observed,keys_start_in,Tweets,f_covariados,win_size=1,beta_0=np.array([1,1,1])):
     """
@@ -247,8 +271,10 @@ def Beta(inicio,time_observed,keys_start_in,Tweets,f_covariados,win_size=1,beta_
         left_hand=beta_left_hand(keys_start_in,Tweets,f_covariados)
         particion=get_particion(inicio,time_observed,f_covariados,win_size=win_size)
         return get_beta(beta_0,particion,left_hand,f_covariados)
-    except:
-        print("Error calculo Beta funcion completa")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  Beta"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def back_ground(beta,t,f_covariados):
     """
@@ -263,7 +289,9 @@ def back_ground(beta,t,f_covariados):
     try:
         return [np.exp(np.dot(beta,f_covariados(i))) for i in t]
     except:
-        print("Error calculo background")
+        msg_error="No se completo operación en la funcion  back_ground"
+        logging.error(msg_error)
+        raise Exception(msg_error)
     
 #----------------------------------------------------------------------------------------
 ## calculo de p_i gorro
@@ -281,7 +309,10 @@ def get_event_count(event_times, start, end,*args):
         mask = (event_times >= start) & (event_times <= end)
         return mask.sum(*args)
     except:
-        print("Error conteo eventos")
+        msg_error="No se completo operación en la funcion  get_event_count"
+        logging.error(msg_error)
+        raise Exception(msg_error)
+
 def get_followers_sum(event_times,followers,start,end):
     """
     Count of followers in given interval.
@@ -296,7 +327,9 @@ def get_followers_sum(event_times,followers,start,end):
         mask = (event_times >= start) & (event_times <= end)
         return followers[mask].sum()
     except:
-        print("Error calculo seguidores")
+        msg_error="No se completo operación en la funcion  get_followers_sum"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def estimate_infectious_rate_constant_vec(event_times, follower, t_start, t_end, kernel_integral, count_events=None):
     """
@@ -322,8 +355,10 @@ def estimate_infectious_rate_constant_vec(event_times, follower, t_start, t_end,
             return count_events / kernel_int.sum()
         else:
             return event_times.size / kernel_int.sum()
-    except:
-        print("Error estimacion intensidades constantes")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  estimate_infectious_rate_constant_vec"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
     
 
 def estimate_infectious_rate_vec(event_times, follower, kernel_integral=integral_zhao, obs_time=24,win_size=4):
@@ -376,8 +411,10 @@ def estimate_infectious_rate_vec(event_times, follower, kernel_integral=integral
 
     #     return np.array(foll[:len(values)])*values,time_x[:len(values)]
         return values,time_x[:len(values)]
-    except:
-        print("Error estimacion intensidades funcion")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  estimate_infectious_rate_vec"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def sigmoid_foll(foll,exp=3):
     """
@@ -393,7 +430,9 @@ def sigmoid_foll(foll,exp=3):
         f[f>10**exp]=10**exp
         return f
     except:
-        print("Error calculo funcion sigmoide")
+        msg_error="No se completo operación en la funcion  sigmoid_foll"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral=integral_zhao,followers_rate=2,win_size=4):
     """
@@ -426,8 +465,10 @@ def compute_p_est(time_observed,keys_tweets,Tweets,kernel_integral=integral_zhao
                 print(followers[mask])
             p_est[i]=[p_i_est,t_points]
         return p_est
-    except:
-        print("Error calculo p_est")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  compute_p_est"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 #----------------------------------------------------------------------------------------
 def infectious_rate_tweets_vec(t, r0=0.424, phi0=0.125, taum=2., tm=24., t0=0,p0=0.01,S=3):
     """
@@ -456,7 +497,9 @@ def infectious_rate_tweets_vec(t, r0=0.424, phi0=0.125, taum=2., tm=24., t0=0,p0
             R[t<t0]=0
             return R
     except:
-        print("Error funcion de infeccion")
+        msg_error="No se completo operación en la funcion  infectious_rate_tweets_vec"
+        logging.error(msg_error)
+        raise Exception(msg_error)
     
 
 def loss_function(params, estimates, fun,s_vec):
@@ -477,7 +520,9 @@ def loss_function(params, estimates, fun,s_vec):
             diffs.append(abs(fun(xval,t0=t0,p0=est[0],S=s_vec[i],*params)-est))
         return np.concatenate(diffs)
     except:
-        print("Error calculo funcion error en la estimacion")
+        msg_error="No se completo operación en la funcion  loss_function"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 
 def fit_parameter(estimates, fun, s_vec,start_values=None):
@@ -497,7 +542,9 @@ def fit_parameter(estimates, fun, s_vec,start_values=None):
 
         return leastsq(func=loss_function, x0=start_values, args=(estimates, fun,s_vec))[0]
     except:
-        print("Error funcion ajuste de parametros")
+        msg_error="No se completo operación en la funcion  fit_parameter"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def error_infectious_rate(estimated,param_fitted,fun,s_vec):
     '''
@@ -523,8 +570,10 @@ def error_infectious_rate(estimated,param_fitted,fun,s_vec):
         total_fitted=np.concatenate(total_fitted)
 
         return abs(total_estimated-total_fitted).sum()/sum(abs(total_estimated))
-    except:
-        print("Error calculo error ajuste de parametros")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  error_infectious_rate"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def get_infectious_rate_fitted(time_observed,
                                keys_tweets,
@@ -549,8 +598,10 @@ def get_infectious_rate_fitted(time_observed,
         error_infectious=error_infectious_rate(p_est,param_fit,fun_infectious,s_vec)
         fun_fit= lambda t,t0,p0,s : fun_infectious(t,t0=t0,p0=p0,S=s,*param_fit)
         return p_est,param_fit,fun_fit,error_infectious
-    except:
-        print("Error funcion completa ajuste de parametros")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  get_infectious_rate_fitted"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 #----------------------------------------------------------------------------------------
 def input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate,estimated):
     """
@@ -571,8 +622,10 @@ def input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate,estimated):
             sum_ext=np.nan_to_num(sum_int*p_t)
             replicas+=sum_ext
         return replicas
-    except:
-        print("Error calculo efecto de las replicas")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  input_replicas"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def lambda_t(t,beta,f_cov,keys_tweets,Tweets,kernel,fun,followers_rate,estimated):
     """
@@ -584,11 +637,13 @@ def lambda_t(t,beta,f_cov,keys_tweets,Tweets,kernel,fun,followers_rate,estimated
         back_g=back_ground(beta,t,f_cov)
         replicas=input_replicas(t,keys_tweets,Tweets,kernel,fun,followers_rate,estimated)
         return back_g+replicas
-    except:
-        print("Error calculo lambda_t")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  lambda_t"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 
-def get_tweets_from_lambda(Lt,t):
+def get_tweets_from_lambda(Lt,t,f_inicio=None):
     """
     Calculo cantidad tweets a partir de la intensidad
 
@@ -596,9 +651,19 @@ def get_tweets_from_lambda(Lt,t):
     """    
     try:
         dt=(t[-1]-t[0])/len(t)
-        return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':(Lt*dt)[:-1]}) 
-    except:
-        print("Error creacion dataframe con los tweets")
+        df=pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':(Lt*dt)[:-1]}) 
+        if f_inicio!=None:
+            restore = lambda a: restore_date(a,f_inicio)
+            df["start"]=df["start"].apply(restore)
+            df["end"]=df["end"].apply(restore)
+
+        return df
+
+
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  get_tweets_from_lambda"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def interpolate_T(T,pre_lamda,t):
     """
@@ -616,9 +681,11 @@ def interpolate_T(T,pre_lamda,t):
                       [pre_lamda[index_low],pre_lamda[index_up]])
         return lamda
     except:
-        print("Error funcion de interpolacion")
+        msg_error="No se completo operación en la funcion  interpolate_T"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
-def thinning_pred(pre_lamda,t,return_samples=False):
+def thinning_pred(pre_lamda,t,return_samples=False,f_inicio=None):
     """
     metodo de prediccion basado en el calculo de probabilidad de la existencia de eventos
 
@@ -642,9 +709,16 @@ def thinning_pred(pre_lamda,t,return_samples=False):
             return samples
         else:    
             CT = count_tweets(samples,t)
-            return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':CT})  
+            df = pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':CT})  
+            if f_inicio!=None:
+                restore = lambda a: restore_date(a,f_inicio)
+                df["start"]=df["start"].apply(restore)
+                df["end"]=df["end"].apply(restore)
+            return df
     except:
-        print("Error methodo thinning de prediccion")
+        msg_error="No se completo operación en la funcion  thinning_pred"
+        logging.error(msg_error)
+        raise Exception(msg_error)
 
 def count_tweets(times,intervals):
     """
@@ -656,8 +730,10 @@ def count_tweets(times,intervals):
         for i in range(len(intervals)-1):
             tweets+=[get_event_count(times, intervals[i], intervals[i+1])]
         return tweets
-    except:
-        print("Error conteo de tweets por intervalos")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  count_tweets"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
         
 def real_tweets(keys_tweets,Tweets,t):
     """
@@ -673,8 +749,10 @@ def real_tweets(keys_tweets,Tweets,t):
         Total_et=np.array(Total_et)
         real_values=count_tweets(Total_et,t)
         return pd.DataFrame({'start':t[:-1],'end':t[1:],'Tweets':real_values})  
-    except:
-        print("Error calculo tweets reales")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  real_tweets"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 
 def lambda_pred(t_pred,keys_tweets,Tweets,beta,f_covariados,kernel,kernel_integral,fun,followers_rate,time_observed,estimated):
@@ -730,8 +808,10 @@ def lambda_pred(t_pred,keys_tweets,Tweets,beta,f_covariados,kernel,kernel_integr
     #     return numerador/denomin
 
         return LP
-    except:
-        print("Error calculo lamda_predict")
+    except Exception as e:
+        msg_error="No se completo operación en la funcion  lambda_pred"
+        logging.error(msg_error)
+        raise Exception(msg_error + " / " +str(e))
 
 def tweets_for_interval(interval,Tweets,t_start,t_end):
     try:
@@ -743,7 +823,9 @@ def tweets_for_interval(interval,Tweets,t_start,t_end):
             print("El intervalo de tiempo dado no esta contenido en los Tweets")
             return total
     except:
-        print("Error conteo tweets por intervalo")
+        msg_error="No se completo operación en la funcion  tweets_for_interval"
+        logging.error(msg_error)
+        raise Exception(msg_error)
     
 
 #----------------------------------------------------------------------------------------
@@ -755,7 +837,7 @@ class modelTweets:
     """    
     def __init__(self, data,
                  train_period,
-                 val_period,
+                 val_period=None,
                  kernel=lambda x: kernel_zhao_vec(x,s0=300/3600,theta=0.242),
                  kernel_primitive=lambda x: kernel_primitive_zhao_vec(x,s0=300/3600,theta=0.242),
                  kernel_integral=lambda x1,x2: integral_zhao(x1,x2,s0=300/3600,theta=0.242),
@@ -768,61 +850,73 @@ class modelTweets:
                  win_size_pred_period = 1,
                  method_pred = 'integral',
                 ):
-        
-        self.data = data
-        self.f_inicio = data['Inicio']
-        self.Tweets = data['Tweets']
-        self.train_period = train_period
-        self.train_start = date_to_hours(train_period[0],self.f_inicio)
-        self.train_end = date_to_hours(train_period[1],self.f_inicio)   
-        self.validate_period = val_period
-        self.validate_start = date_to_hours(val_period[0],self.f_inicio)
-        self.validate_end = date_to_hours(val_period[1],self.f_inicio)
-        self.kernel = kernel
-        self.kernel_primitive = kernel_primitive
-        self.kernel_integral = kernel_integral
-        self.f_covariates = lambda a : f_covariates[0](f_covariates[1](a,self.f_inicio))
-        self.win_size_for_partition_cov=win_size_for_partition_cov
-        self.followers_rate = followers_rate
-        self.infectious_rate_base = infectious_rate_base
-        self.win_size_infectious_rate  = win_size_infectious_rate
-        self.win_size_train_period  = win_size_train_period
-        self.win_size_pred_period  = win_size_pred_period
-        self.method_pred  = method_pred
-        
-        keys_train=[]
-        for i in self.Tweets:
-            times=self.Tweets[i]['times']
-            if sum((times >= self.train_start) & (times < self.train_end)) > 0:
-                keys_train.append(i)
-        self.keys_train = keys_train
-        if len(keys_train)==0:
-            print("Error, No se encontraron datos en el periodo de entrenamiento establecido")
-        
-        keys_train_in=[]
-        for i in keys_train:
-            t0=self.Tweets[i]['times'][0]
-            if (t0 >= self.train_start) &  (t0 < self.train_end):
-                keys_train_in.append(i)
-        self.keys_train_in = keys_train_in
-        
-        
-        keys_validation=[]
-        for i in self.Tweets:
-            times=self.Tweets[i]['times']
-            if sum((times >= self.validate_start) & (times < self.validate_end)) > 0:
-                keys_validation.append(i)
-        self.keys_validation = keys_validation
-        if len(keys_validation)==0:
-            print("Error, No se encontraron datos en el periodo de validacion establecido")
-        
-        self.t_train=np.linspace(self.train_start,self.train_end,num=int((self.train_end-self.train_start)/self.win_size_train_period))
-        self.t_pred=np.linspace(self.validate_start,self.validate_end,num=int((self.validate_end-self.validate_start)/self.win_size_pred_period))
-        
-        self.real_tweets_train=real_tweets(self.keys_train,self.Tweets,self.t_train)
-        self.real_tweets_validate=real_tweets(self.keys_validation,self.Tweets,self.t_pred)
+        logging.debug('Empezo inicialización modelo de Tweets.')
+        try:
+            self.data = data
+            self.f_inicio = data['Inicio']
+            self.Tweets = data['Tweets']
+            self.train_period = train_period
+            self.train_start = date_to_hours(train_period[0],self.f_inicio)
+            self.train_end = date_to_hours(train_period[1],self.f_inicio)   
+            
+            self.kernel = kernel
+            self.kernel_primitive = kernel_primitive
+            self.kernel_integral = kernel_integral
+            self.f_covariates = lambda a : f_covariates[0](f_covariates[1](a,self.f_inicio))
+            self.win_size_for_partition_cov=win_size_for_partition_cov
+            self.followers_rate = followers_rate
+            self.infectious_rate_base = infectious_rate_base
+            self.win_size_infectious_rate  = win_size_infectious_rate
+            self.win_size_train_period  = win_size_train_period
+            self.win_size_pred_period  = win_size_pred_period
+            self.method_pred  = method_pred
+            
+            keys_train=[]
+            for i in self.Tweets:
+                times=self.Tweets[i]['times']
+                if sum((times >= self.train_start) & (times < self.train_end)) > 0:
+                    keys_train.append(i)
+            self.keys_train = keys_train
+            if len(keys_train)==0:
+                msg_error="No se encontraron datos en el periodo de entrenamiento establecido."
+                logging.error(msg_error)
+                raise Exception(msg_error)
+            logging.debug('Lista de tweets de entrenamiento creado.')   
+            
+            keys_train_in=[]
+            for i in keys_train:
+                t0=self.Tweets[i]['times'][0]
+                if (t0 >= self.train_start) &  (t0 < self.train_end):
+                    keys_train_in.append(i)
+            self.keys_train_in = keys_train_in
+            self.t_train=np.linspace(self.train_start,self.train_end,num=int((self.train_end-self.train_start)/self.win_size_train_period))
+            self.real_tweets_train=real_tweets(self.keys_train,self.Tweets,self.t_train)
+
+            if val_period != None:
+                self.validate_period = val_period
+                self.validate_start = date_to_hours(val_period[0],self.f_inicio)
+                self.validate_end = date_to_hours(val_period[1],self.f_inicio)
+                keys_validation=[]
+                for i in self.Tweets:
+                    times=self.Tweets[i]['times']
+                    if sum((times >= self.validate_start) & (times < self.validate_end)) > 0:
+                        keys_validation.append(i)
+                self.keys_validation = keys_validation
+                if len(keys_validation)==0:
+                    msg_error="No se encontraron datos en el periodo de validacion establecido"
+                    logging.debug(msg_error)
+                    raise Exception(msg_error)
+                logging.debug('Lista de tweets de validación creado.')
+                self.t_pred=np.linspace(self.validate_start,self.validate_end,num=int((self.validate_end-self.validate_start)/self.win_size_pred_period))
+                self.real_tweets_validate=real_tweets(self.keys_validation,self.Tweets,self.t_pred)
+       
+        except Exception as e:
+            msg_error = "No se pudo completar con la inicialización del modelo de tweets."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
         
     def compute_Beta(self,beta_0=np.array([1,1,1])):
+        logging.debug('Empezo operación calculo Beta.')
         try:
             beta_0=np.ones_like(self.f_covariates(0))
             self.Beta=Beta(self.train_start,self.train_end,
@@ -830,38 +924,50 @@ class modelTweets:
                             self.f_covariates,self.win_size_for_partition_cov,
                             beta_0
                             )
+            logging.debug('Termino operación calculo Beta.')
             return self.Beta
-        except:
-            print("Error calculo Beta en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  compute_Beta en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
+            
 
     def compute_p_est(self):
+        logging.debug('Empezo operación calculo estimación de intensidades.')
         try:
             self.p_est = compute_p_est(self.train_end,
                                        self.keys_train,
                                        self.Tweets,
                                        self.kernel_integral,
                                        self.followers_rate)
+            logging.debug('Termino operación calculo estimación de intensidades.')
             return self.p_est
-        except:
-            print("Error calculo estimacion en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  compute_p_est en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
     
     def infectious_rate_fit(self):
+        logging.debug('Empezo operación ajuste de intensidades.')
         try:
             p_est,param_fit,fun_fit,error_infectious = get_infectious_rate_fitted(self.train_end,
-                                                                            self.keys_train,
-                                                                            self.Tweets,
-                                                                            self.kernel_integral,
-                                                                            self.infectious_rate_base,
-                                                                            self.followers_rate,
-                                                                            self.win_size_infectious_rate  
-                                                                            )
+                                                                                  self.keys_train,
+                                                                                  self.Tweets,
+                                                                                  self.kernel_integral,
+                                                                                  self.infectious_rate_base,
+                                                                                  self.followers_rate,
+                                                                                  self.win_size_infectious_rate  
+                                                                                 )
             self.p_est = p_est
             self.param_infectious_fit=param_fit
             self.infectious_rate=fun_fit
             self.error_infectious=error_infectious
+            logging.debug('Termino operación ajuste de intensidades.')
             return self.param_infectious_fit,self.infectious_rate,self.error_infectious
-        except:
-            print("Error ajuste parametros en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  infectious_rate_fit en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
     
     def compute_lamda_train_point(self,t):
         try:
@@ -874,10 +980,13 @@ class modelTweets:
                             self.infectious_rate,
                             self.followers_rate,
                             self.p_est)[0]
-        except:
-            print("Error calculo lambda_train puntual en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  compute_lamda_train_point en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
     
     def compute_lambda_train(self):
+        logging.debug('Empezo calculo lamda en el periodo de entrenamiento.')
         try:
             self.lambda_train = lambda_t(self.t_train,
                                         self.Beta,
@@ -889,15 +998,17 @@ class modelTweets:
                                         self.followers_rate,
                                         self.p_est)
             if self.method_pred == 'integral':
-                self.Tweets_est_train=get_tweets_from_lambda(self.lambda_train, self.t_train)
+                self.Tweets_est_train=get_tweets_from_lambda(self.lambda_train, self.t_train,self.f_inicio)
             elif self.method_pred == 'thinning':
                 self.Tweets_est_train=thinning_pred(self.lambda_train,self.t_train)
             else:
-                return "Metodo de predicción invalido"
-
+                raise Exception("Metodo de predicción invalido")
+            logging.debug('Termino calculo lamda en el periodo de entrenamiento.')
             return self.lambda_train, self.Tweets_est_train
-        except:
-            print("Error calculo lambda_train en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  compute_lambda_train en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
     
     def compute_lamda_predict_point(self,t):
         try:
@@ -914,9 +1025,17 @@ class modelTweets:
         except:
             print("Error calculo lambda_predict puntual en la clase")
 
-    def compute_lambda_predict(self):
+    def compute_lambda_predict(self,dates=None):
+        logging.debug('Empezo calculo lamda en el periodo de predicción.')
         try:
-            self.lambda_predict = lambda_pred(self.t_pred,
+            if dates == None:
+                t_pred=self.t_pred
+            else:
+                start = date_to_hours(dates[0],self.f_inicio)
+                end = date_to_hours(dates[1],self.f_inicio)   
+                t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+
+            self.lambda_predict = lambda_pred(t_pred,
                                               self.keys_train,
                                               self.Tweets,
                                               self.Beta,
@@ -929,20 +1048,23 @@ class modelTweets:
                                               self.p_est)
 
             if self.method_pred == 'integral':
-                self.Tweets_pred=get_tweets_from_lambda(self.lambda_predict, self.t_pred)
+                self.Tweets_pred=get_tweets_from_lambda(self.lambda_predict, t_pred,self.f_inicio)
             elif self.method_pred == 'thinning':
-                self.Tweets_pred=thinning_pred(self.lambda_predict,self.t_pred)
+                self.Tweets_pred=thinning_pred(self.lambda_predict,t_pred)
             else:
-                return "Metodo de predicción invalido"
+                raise Exception("Metodo de predicción invalido")
 
-
+            logging.debug('Termino calculo lamda en el periodo de predicción.')
             return self.lambda_predict,self.Tweets_pred
-        except:
-            print("Error calculo lambda_predict en la clase")
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  compute_lambda_predict en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
 
     def poisson_method(self):
-        try:
-            import statsmodels.api as sm
+        logging.debug('Empezo proceso de predicción metodo de poisson.')
+        import statsmodels.api as sm
+        try:            
             X=np.array([self.f_covariates(i) for i in self.real_tweets_train.start])
             y=self.real_tweets_train.Tweets
             poisson_training_results = sm.GLM(y, X, family=sm.families.Poisson()).fit()
@@ -950,59 +1072,65 @@ class modelTweets:
             poisson_predictions = poisson_training_results.get_prediction(X_pred).summary_frame()['mean'].values
             dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
             self.poisson_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':poisson_predictions}) 
+            logging.debug('Termino proceso de predicción metodo de poisson.')
             return self.poisson_predictions
         except:
-            print("Error calculo metodo de prediccion poisson en la clase")
+            logging.error("No termino proceso de predicción metodo de poisson.")
 
     
 
     def linear_reg_method(self):
-        
-        def to_mini(alpha):
-            return np.sum(times-alpha,axis=0)
+        logging.debug('Empezo proceso de predicción metodo de regresión lineal.')
+        try:
+            def to_mini(alpha):
+                return np.sum(times-alpha,axis=0)
 
-        from scipy.optimize import leastsq
-        back_g=back_ground(self.Beta,self.t_pred,self.f_covariates)
-        BG_samples=thinning_pred(back_g,self.t_pred,return_samples=True)
-        BG_samples=np.array(count_tweets(BG_samples,self.t_pred))
+            from scipy.optimize import leastsq
+            back_g=back_ground(self.Beta,self.t_pred,self.f_covariates)
+            BG_samples=thinning_pred(back_g,self.t_pred,return_samples=True)
+            BG_samples=np.array(count_tweets(BG_samples,self.t_pred))
 
-        values=[]
-        dist_RT=[]
-        max_=0
-        for i in self.keys_train_in:
-            CT=count_tweets(self.Tweets[i]['times'],self.t_train)
-            CT=np.cumsum(np.trim_zeros(CT))
-            dist_RT.append(CT[0])    
-            CT=CT/CT[-1]
-            if len(CT)>max_:
-                max_=len(CT)
-            values.append(np.log(CT))
+            values=[]
+            dist_RT=[]
+            max_=0
+            for i in self.keys_train_in:
+                CT=count_tweets(self.Tweets[i]['times'],self.t_train)
+                CT=np.cumsum(np.trim_zeros(CT))
+                dist_RT.append(CT[0])    
+                CT=CT/CT[-1]
+                if len(CT)>max_:
+                    max_=len(CT)
+                values.append(np.log(CT))
 
-        times=[]
-        for i in values:
-            l=np.zeros(max_)
-            l[:len(i)]=i
-            times.append(l)
-        times=np.array(times)
-        Root = leastsq(to_mini, x0=np.ones(max_))[0]
-        S2=Root/len(times)
-        exp_=np.exp(Root+S2/2)
-        hist,bins=np.histogram(dist_RT,density=False,bins=30) 
-        hist=hist/hist.sum()
-        BG_cum=np.zeros_like(BG_samples)
-        for i,j in enumerate(BG_samples):
-            RT_dist=np.random.choice(bins[1:],size=j,p=hist)
-            A=(RT_dist.reshape((len(RT_dist),1))*exp_).astype(int)
-            A=(A[:,1:]-A[:,:-1]).sum(axis=0)
-            lim_sup=i+len(A)
-            if  lim_sup >= len(BG_samples):
-                lim_sup=len(BG_samples)
-            BG_cum[i:lim_sup]+=A[:lim_sup-i]
-        dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
-        self.linear_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':BG_cum+BG_samples}) 
-        return self.linear_predictions
+            times=[]
+            for i in values:
+                l=np.zeros(max_)
+                l[:len(i)]=i
+                times.append(l)
+            times=np.array(times)
+            Root = leastsq(to_mini, x0=np.ones(max_))[0]
+            S2=Root/len(times)
+            exp_=np.exp(Root+S2/2)
+            hist,bins=np.histogram(dist_RT,density=False,bins=30) 
+            hist=hist/hist.sum()
+            BG_cum=np.zeros_like(BG_samples)
+            for i,j in enumerate(BG_samples):
+                RT_dist=np.random.choice(bins[1:],size=j,p=hist)
+                A=(RT_dist.reshape((len(RT_dist),1))*exp_).astype(int)
+                A=(A[:,1:]-A[:,:-1]).sum(axis=0)
+                lim_sup=i+len(A)
+                if  lim_sup >= len(BG_samples):
+                    lim_sup=len(BG_samples)
+                BG_cum[i:lim_sup]+=A[:lim_sup-i]
+            dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
+            self.linear_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':BG_cum+BG_samples}) 
+            logging.debug('Termino proceso de predicción metodo de regresión lineal.')
+            return self.linear_predictions
+        except:
+            logging.error('No termino proceso de predicción metodo de regresión lineal.')
     
     def compute_errors(self,predict=pd.DataFrame(columns=['a'])):
+        logging.debug('Empezo proceso de calculo errores en predicción.')
         try:
             if predict.isnull().all().all() == True:
                 predict= self.Tweets_pred
@@ -1034,20 +1162,36 @@ class modelTweets:
             self.errors_predict_cum['RMSE']=np.sqrt((diff**2).mean())
             self.errors_predict_cum['Pearson']=abs(stats.pearsonr(real,predict)[0])        
             self.errors_predict_cum['kendall']=abs(stats.kendalltau(real,predict)[0])
-
+            logging.debug('Termino proceso de calculo errores en predicción.')
             return self.errors_predict,self.errors_predict_cum
         except:
-            print("Error calculo errores en la clase")
+            logging.error("No termino proceso de calculo errores en predicción.")
         
         
         
     def train(self,beta_0=np.array([1,1,1])):
+        logging.debug('Empezo proceso de entrenamiento modelo tweets.')
         try:
             self.compute_Beta(beta_0)
             self.infectious_rate_fit()
             self.compute_lambda_train()
-
+            logging.debug('Termino proceso de entrenamiento modelo tweets.')
             return self.Beta, self.param_infectious_fit, self.error_infectious, self.lambda_train
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  train en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
+
+    def save_model(self,path):
+        """
+        Funcion para guardar el objeto de la clase como archivo pkl
+        """
+        try:
+            with open(path, 'wb') as outp:
+                pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
         except:
-            print("Error funcion train en la clase")
+            msg_error="No se pudo guardar el modelo con la direccion establecida"
+            logging.error(msg_error)
+            raise Exception(msg_error)
+        
 #----------------------------------------------------------------------------------------

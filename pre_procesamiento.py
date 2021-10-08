@@ -119,8 +119,7 @@ def stem_tokens(tokens):
 
 
 def clean_text(i):
-    
-    
+  
     functions=[remove_RT,remove_url,replace_tags,remove_arroba,remove_emoji,remove_stopwords,stem_tokens]
     text=i
     for j in functions:

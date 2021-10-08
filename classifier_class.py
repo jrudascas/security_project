@@ -10,6 +10,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
+import logging
+
 
 class modelClassification():
     """
@@ -32,39 +34,58 @@ class modelClassification():
                  data_to_train=None,
                  percent_val_data=0.3
                 ):
-        self.text_column= text_column
+        logging.debug('Empezo inicialización modelo de Clasificación.')
         try:
-            self.vectors_words= KeyedVectors.load_word2vec_format(vectors_path)
-        except:
-            print("Error: No se pudo cargar los vectores de palabras con la ruta especificada")
-        try:
-            #preprocesamiento keywords
-            keys=pd.read_excel(keywords_path)
-            keys=list(keys[keys.columns[0]].values)
-            keys=[i.replace('*','').replace('+','') for i in keys]
-            keys=list(pd.Series(keys).apply(clean_text))
-            self.keys=keys
-        except:
-            print("Error: No se pudo cargar las keywords con la ruta especificada")
-        
-        self.model_path=model_path
-        # si el modelo no se da se tienen que dar la base de datos de entranamiento, la columna de prediccion y el 
-        # porcentaje de los datos de validacion
-        if predict_column == None:
+            self.text_column= text_column
             try:
-                self.model=load(model_path)
-            except:
-                print("Error: No se pudo cargar el modelo con la ruta especificada")
-        else:
+                self.vectors_words= KeyedVectors.load_word2vec_format(vectors_path)
+                logging.debug('Vectores de embebimiento de palabras cargado.')
+            except OSError as error:
+                msg_error="No se pudo cargar los vectores de palabras con la ruta especificada."
+                logging.error(msg_error)
+                raise Exception(msg_error)
             try:
-                self.data_to_train=data_to_train
-                self.predict_column=predict_column
-                if self.data_to_train[self.predict_column].nunique() != 2:
-                    print("Error: La columna a predecir esconstante o aparecen mas de 2 clases")
-                self.percent_val_data=percent_val_data
+                #preprocesamiento keywords
+                keys=pd.read_excel(keywords_path)
+                keys=list(keys[keys.columns[0]].values)
+                keys=[i.replace('*','').replace('+','') for i in keys]
+                keys=list(pd.Series(keys).apply(clean_text))
+                self.keys=keys
+                logging.debug('Keywords de seguridad cargado y procesado.')
             except:
-                print("Error: La base de datos no tiene la columna especificada: "+str(self.predict_column))
-                
+                msg_error="No se pudo cargar las keywords con la ruta especificada"
+                logging.error(msg_error)
+                raise Exception(msg_error)
+            
+            self.model_path=model_path
+            # si el modelo no se da se tienen que dar la base de datos de entranamiento, la columna de prediccion y el 
+            # porcentaje de los datos de validacion
+            if predict_column == None:
+                try:
+                    self.model=load(model_path)
+                    logging.debug('Modelo de clasificación pre-entrenado cargado.')
+                except:
+                    msg_error="No se pudo cargar el modelo de classificación pre-entrenado con la ruta especificada."
+                    logging.error(msg_error)
+                    raise Exception(msg_error)
+            else:
+                try:
+                    self.data_to_train=data_to_train
+                    self.predict_column=predict_column
+                    if self.data_to_train[self.predict_column].nunique() != 2:
+                        msg_error="La columna a predecir es constante o aparecen más de 2 clases"
+                        logging.error(msg_error)
+                        raise Exception(msg_error)
+                    self.percent_val_data=percent_val_data
+                except:
+                    msg_error ="La base de datos no tiene la columna especificada: "+str(self.predict_column)
+                    logging.error(msg_error)
+                    raise Exception(msg_error)
+            logging.debug('Termino inicialización modelo de Clasificación.')
+        except Exception as e:
+            msg_error= "No se pudo completar con la inicialización del modelo de clasificación"
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
         
     def filter_keys(self,text):
         """
@@ -94,6 +115,7 @@ class modelClassification():
         :param DataFrame: Dataframe de pandas con los datos a clasificar
         :return: Dataframe con las filas que pasaron la clasificacion
         """
+        logging.debug('Empezo clasificación base de datos.')
         try:
             df=DataFrame.copy()
             df['clean']=df[self.text_column].apply(clean_text_join)
@@ -102,15 +124,19 @@ class modelClassification():
             df['vectors']=df.clean.apply(self.get_vectors)
             df['predict']=self.model.predict(np.array(list(df['vectors'].values)))
             df=df[df['predict'] == 1]
+            logging.debug('Termino clasificación base de datos.')
             return df[DataFrame.columns]
         except:
-            print("Error en la clasificacion")
+            msg_error = "No se pudo terminar el proceso de clasificación"
+            logging.error(msg_error)
+            raise Exception(msg_error)
     
     def train_model(self):
         """
         Funcion para entrenar el modelo de clasificacion dado un dataframe etiquetado
         :return: scores de clasificacion obtenidos en el conjunto de validacion
         """
+        logging.debug('Empezo entrenamiento modelo de clasificación.')
         try:
             train,val=train_test_split(self.data_to_train,test_size=self.percent_val_data)
             while (train[self.predict_column].nunique(),val[self.predict_column].nunique()) != (2,2):
@@ -127,9 +153,25 @@ class modelClassification():
             y_pred[np.array(val['filter'].values == 0)]=0
             accuracy=accuracy_score(val[self.predict_column].values,y_pred)
             precision,recall,f1,_=precision_recall_fscore_support(val.seguridad.values,y_pred,average="binary")
-            print(accuracy,precision,recall,f1)
+            #print(accuracy,precision,recall,f1)
             self.scores={"Accuracy":accuracy,"Precision":precision,"Recall":recall,"F1-score":f1}
             dump(self.model, self.model_path)
+            logging.debug('Termino entrenamiento modelo de clasificación.')
             return self.scores
         except:
-            print("Error en el entrenamiento del modelo")
+            msg_error="No se pudo completar el entrenamiento del modelo de clasificación"
+            logging.error(msg_error)
+            raise Exception(msg_error)
+
+    def save_model(self,path):
+        """
+        Funcion para guardar el objeto de la clase como archivo pkl
+        """
+        try:
+            with open(path, 'wb') as outp:
+                pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
+            logging.debug('Modelo de clasificación de tweets guardado exitosamente.')
+        except:
+            msg_error="No se pudo guardar el modelo de clasificación con la direccion establecida"
+            logging.error(msg_error)
+            raise Exception(msg_error)

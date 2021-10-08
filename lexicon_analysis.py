@@ -35,6 +35,7 @@ from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.naive_bayes import MultinomialNB,BernoulliNB
 from sklearn.linear_model import LogisticRegression,SGDClassifier
 from sklearn.svm import SVC
+import logging
 
 """
 CARGA DE DATOS
@@ -164,19 +165,21 @@ def getVocab(fileName):
     return: positive_vocab y negative_vocab: diccionarios con las palabras positivas
     y negativas y su score
     '''
-    positive_vocab = [];
-    negative_vocab = [];
+    logging.debug('Empezo carga modelo de cuantificación de textos.')
+    positive_vocab = []
+    negative_vocab = []
     xmldoc = minidom.parse(fileName)
     itemlist = xmldoc.getElementsByTagName('senticon')
     for s in itemlist[0].getElementsByTagName('layer'):
         for pl in s.getElementsByTagName('positive'):
             for pll in pl.getElementsByTagName('lemma'):
                 positive_vocab.append([pll.firstChild.nodeValue.replace(" ", ""),
-                                       float(pll.getAttribute('pol'))]);
+                                       float(pll.getAttribute('pol'))])
         for pl in s.getElementsByTagName('negative'):
             for pll in pl.getElementsByTagName('lemma'):
                 negative_vocab.append([pll.firstChild.nodeValue.replace(" ", ""),
-                                       float(pll.getAttribute('pol'))]);
+                                       float(pll.getAttribute('pol'))])
+    logging.debug('Termino carga modelo de cuantificación de textos.')
     return (positive_vocab,negative_vocab)
 
 #(positive_vocab,negative_vocab) = getVocab('senticon.es.xml')
