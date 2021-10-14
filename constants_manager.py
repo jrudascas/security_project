@@ -12,6 +12,8 @@ PASSWORD = "Unal123"
 
 NAME_ENTRENAMIENTO="ENTRENAMIENTO"
 NAME_PREDICCION="PREDICCIÓN"
+NAME_VALIDACION="VALIDACIÓN"
+NAME_PREPROCESAMIENTO="PREPROCESAMIENTO"
 
 ESTADO_EXITO="EXITO"
 ESTADO_ERROR="ERROR"
@@ -28,3 +30,4 @@ text_column = "texto_tweet"
 RT_column = "IsRetweet"
 IdFrom_column = "num_retweet"
 followers_column = "num_followers"
+score_column = "score"

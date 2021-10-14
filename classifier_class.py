@@ -15,7 +15,7 @@ import logging
 
 class modelClassification():
     """
-    Clase del modelo de clasificacion de textos relacionados con seguridad.
+    Clase del modelo de clasificación de textos relacionados con seguridad.
     
     :param keywords_path: direccion del excel que contiene las palabras clave compuestas
     :param vectors_path: direccion del archivo de transformacion de palabras a vectores
