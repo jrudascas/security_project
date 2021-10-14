@@ -9,6 +9,10 @@ import pandas as pd
 from datetime import timedelta, datetime
 
 def get_token_acces():
+    """
+    Obtiene un token para realizar operaciones en el API
+    :return: string token
+    """
     print('Obteniendo token ...')
     token_response = requests.post(c.API_HOST + ':' + c.API_PORT + c.API_RELATIVE_PATH_TOKEN_ACCESS, data={'username' : c.API_USER, 'password' : c.API_PASSWORD})
     #print(token_response.json())
@@ -16,10 +20,16 @@ def get_token_acces():
     return token
 
 def get_tipos_proceso(token):
+    """
+    Obtiene la información de los tipos de proceso de la API
+
+    :param token: string token 
+    :return: dict con keys los tipos de procesos y valores los ids en el API
+    """
     auth_header={'Authorization' : 'Token ' + token}
     response = requests.get(c.API_HOST + ':' + c.API_PORT + c.API_RELATIVE_PATH_GET_TIPOPROCESO, headers=auth_header)
     dict_response = response.json()
-    tipos_proceso={c.NAME_ENTRENAMIENTO:0,c.NAME_PREDICCION:0}
+    tipos_proceso={c.NAME_ENTRENAMIENTO:0,c.NAME_PREDICCION:0,c.NAME_VALIDACION:0,c.NAME_PREPROCESAMIENTO:0}
     for i in dict_response:
         if i["nombre_tipo_proceso"] in tipos_proceso:
             tipos_proceso[i["nombre_tipo_proceso"]]=i['id_tipo_proceso']
@@ -27,6 +37,12 @@ def get_tipos_proceso(token):
     return tipos_proceso
     
 def get_estados_ejecucion(token):
+    """
+    Obtiene la información de los estados de ejecución de la API
+
+    :param token: string token 
+    :return: dict con keys los estados de procesos y valores los ids en el AP
+    """
     auth_header={'Authorization' : 'Token ' + token}
     response = requests.get(c.API_HOST + ':' + c.API_PORT + c.API_RELATIVE_PATH_GET_ESTADOEJECUCION, headers=auth_header)
     dict_response = response.json()
@@ -40,7 +56,14 @@ def get_estados_ejecucion(token):
 
 
 def update_process_state(id_tipo_proceso, id_estado_ejecucion, token):
+    """
+    Actualiza un estado de proceso
 
+    :param id_tipo_proceso: id del tipo de proceso a actualizar
+    :param id_estado_ejecucion: id del estado de ejecucion del proceso a actualizar
+    :param token: string token
+    :return: 
+    """
     fecha_actual = datetime.now()
     time_stamp = fecha_actual.strftime('%Y-%m-%-d %H:%M:%S')
     auth_header={'Authorization' : 'Token ' + token}
@@ -58,6 +81,12 @@ def update_process_state(id_tipo_proceso, id_estado_ejecucion, token):
         logging.debug("No se completo la actualización estado de proceso en el API")
 
 def colum_rt(input_):
+    """
+    Función para establecer si un tweet es original o retweet
+
+    :param input_: entrada de validación
+    :return: valor 0 o 1 correspondiente a original y retweet 
+    """
     if input_ == "0" :
         return 0
     else: 
@@ -72,6 +101,18 @@ def get_data_from_postgress(start_data=None,
                             password=c.PASSWORD,
                             postgres_jar=c.PATH_POSTGRES_JAR
                             ):
+    """
+    Función para descargar los datos desde la base de datos postgress
+
+    :param start_data: string fecha inicio de los datos
+    :param database_url: string dirección url de la base de datos
+    :param database: string nombre base de datos
+    :param table: string nombre de la tabla
+    :param user: string nombre usuario
+    :param password: string password
+    :param postgres_jar: string dirección postgress jar
+    :return: pandas dataframe con los datos descargados
+    """
     try:
         logging.debug("Empezo descargue de datos desde base de datos postgress")
         spark=SparkSession.builder.appName("Python Spark SQL basic example").config("spark.jars",postgres_jar).config("spark.executor.memory", "70g").config("spark.driver.memory", "50g").config("spark.memory.offHeap.enabled",True).config("spark.memory.offHeap.size","16g") .getOrCreate()

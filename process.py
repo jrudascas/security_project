@@ -73,6 +73,9 @@ def process(log_file,
             win_size_pred_period = 1,
             method_pred = 'integral'
             ):
+    """
+    Función principal ejecución modelo percepción de seguridad
+    """  
     logging.basicConfig(filename=log_file,level=logging.DEBUG)
     logging.debug('Empezo función process.')
 
@@ -153,7 +156,7 @@ def process(log_file,
                                          method_pred = method_pred
                                         )
             _,info=generalmodel.prepare_data()
-            print(len(info['Tweets']))
+            #print(len(info['Tweets']))
             generalmodel.create_model_tweets(info)
 
         else:
@@ -306,6 +309,7 @@ if __name__ == "__main__":
                 method_pred
                 )
     except Exception as e:
-        print(e)
+        raise Exception(e)
+        #print(e)
 
     

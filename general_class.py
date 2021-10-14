@@ -5,7 +5,8 @@ from quantifier_class import *
 from lexicon_analysis import *
 import os.path
 from utilis import get_estados_ejecucion, get_tipos_proceso, get_token_acces, update_process_state
-from constants_manager import ESTADO_EXITO, ESTADO_ERROR, ESTADO_PROCESO, ESTADO_CANCELADO, NAME_PREDICCION,NAME_ENTRENAMIENTO
+from constants_manager import ESTADO_EXITO, ESTADO_ERROR, ESTADO_PROCESO, ESTADO_CANCELADO, NAME_PREDICCION,NAME_ENTRENAMIENTO, NAME_VALIDACION, NAME_PREPROCESAMIENTO
+from constants_manager import TweetId_column,RT_column,IdFrom_column,date_column,followers_column,score_column
 import logging
 import dill
 class modeloBase:
@@ -31,12 +32,12 @@ class modelPercepcion(modeloBase):
                  train_period,
                  val_period=None,
                  f_limite=None,
-                 TweetId_column="TweetId",
-                 RT_column="IsRetweet",
-                 IdFrom_column="tweet_from",
-                 date_column="CreatedAt",              
-                 followers_column="followers",
-                 score_column="score",         
+                 TweetId_column=TweetId_column,
+                 RT_column=RT_column,
+                 IdFrom_column=IdFrom_column,
+                 date_column=date_column,              
+                 followers_column=followers_column,
+                 score_column=score_column,         
                  tweets_model_base=modelTweets,
                  f_covariates=(T_c,restore_date),
                  win_size_for_partition_cov=1,
@@ -97,6 +98,7 @@ class modelPercepcion(modeloBase):
         :return: 
         """
         logging.debug('Empezo proceso preparación de los datos.')
+        update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_PROCESO], get_token_acces())
         try:
             df=self.original_data.copy()
             df=df[df[self.date_column] >= self.f_limite]
@@ -151,6 +153,7 @@ class modelPercepcion(modeloBase):
             logging.debug('Termino proceso preparación de los datos.')
             return tweets_score,info
         except Exception as e:
+            update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             raise Exception(e)
 
     def create_model_tweets(self,data):
@@ -206,8 +209,10 @@ class modelPercepcion(modeloBase):
                                                     method_pred = self.method_pred)
             logging.debug('Objeto modelo tweets creado.')
             self.dict_data=new
+            update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
             return self.tweets_model
         except Exception as e:
+            update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             msg_error = "No se completo la creación del objeto modelo tweets."
             logging.error(msg_error)
             raise Exception(msg_error + " / " +str(e))
@@ -270,13 +275,17 @@ class modelPercepcion(modeloBase):
         :return: diccionario diferentes metricas calculadas
         """
         logging.debug('Empezo proceso de validación.') 
+        update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_PROCESO], get_token_acces())
         try:
             if self.validate_period == None:
+                update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
                 raise Exception("No se ha establecido el periodo de validación")
             else:
                 self.tweets_model.compute_errors()
+                update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
                 return self.tweets_model.errors_predict
         except Exception as e:
+            update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             msg_error="No se pudo terminar el proceso de validación de la predicción"
             logging.error(msg_error)
             raise Exception(msg_error + " / " +str(e))
