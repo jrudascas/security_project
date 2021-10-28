@@ -43,9 +43,12 @@ def info_data(data,column_date):
 
 
 def process(log_file,
+            summary_file,
             save_model,
             subprocess,
             f_limite=None,
+            save_freq_palabras=None,
+            save_real_scores=None,
             predict_period=None,
             save_result_predict=None,
             exist_model_path=None,
@@ -59,13 +62,13 @@ def process(log_file,
             percent_val_data=0.3,
             path_quantify_model=path_quantify_model_,
             qmodel_path=None,
-            score_column="score",
-            text_column="Text",
-            TweetId_column="TweetId",
-            RT_column="IsRetweet",
-            IdFrom_column="tweet_from",
-            date_column="CreatedAt",              
-            followers_column="followers",
+            score_column=cm.SCORE_COLUMN,
+            text_column=cm.TEXT_COLUMN,
+            TweetId_column=cm.TWEETID_COLUMN,
+            RT_column=cm.RT_COLUMN,
+            IdFrom_column=cm.IDFROM_COLUMNN,
+            date_column=cm.DATE_COLUMN,              
+            followers_column=cm.FOLLOWERS_COLUMN,
             win_size_for_partition_cov=1,
             followers_rate=2,
             win_size_infectious_rate = 3,
@@ -80,14 +83,26 @@ def process(log_file,
     logging.debug('Empezo función process.')
 
     try:
-   
+        locals_=locals()
+        summary = open(summary_file,"w")
+        summary.write("Ejecución proceso modelo Percepción de Seguridad \n")
+        summary.write("Fecha: "+str(datetime.now())+"\n")
+        summary.write("Variables de entrada: \n")
+        for i in locals_:
+            if locals_[i] != None:
+                summary.write(str(i)+": "+str(locals_[i])+"\n")
+        
+        firsttime=False
+
         if exist_model_path == None:
+            firsttime=True
             logging.debug('Verificación archivos para crear modelos.')
             ## modelo clasificación de tweets relacionados con seguridad
             if not os.path.isfile(path_classify_model):
                 logging.debug('No se encontro modelo clasificación tweets existente con la dirección establecida.')
                 try:
                     data_to_train_clasify=pd.read_csv(data_to_train_clasify)
+                    summary.write("Cantidad textos para entrenar modelo: "+str(len(data_to_train_clasify)) +"\n")
                 except:
                     msg_error="No se pudo cargar archivo csv para entrenar modelo clasificación de tweets"
                     logging.debug(msg_error)
@@ -111,6 +126,7 @@ def process(log_file,
                     raise Exception(msg_error)
             ## modelo de cuantificación de tweets relacionados con seguridad
             if not os.path.isfile(path_quantify_model):
+                
                 logging.debug('No se encontro modelo cuantificación tweets existente con la dirección establecida.')
                 quantify_model=modelQuantification(text_column,
                                                    qmodel_path,
@@ -129,14 +145,16 @@ def process(log_file,
             ## modelo tweets
 
             ## lectura datos
-            data=get_data_from_postgress()
+            data=get_data_from_postgress(summary=summary)
             train_period=info_data(data,date_column)
-            print(train_period)
+            summary.write("Periodo de entrenamiento: " +str(train_period) + "\n")
             if f_limite == None:
                 f_limite = train_period[0]
 
-            generalmodel=modelPercepcion(data,
-                                         classify_model,
+            if valid_period != None:
+                valid_period=tuple(valid_period.split(","))
+
+            generalmodel=modelPercepcion(classify_model,
                                          quantify_model,
                                          train_period,
                                          valid_period,
@@ -155,8 +173,18 @@ def process(log_file,
                                          win_size_pred_period = win_size_pred_period,
                                          method_pred = method_pred
                                         )
-            _,info=generalmodel.prepare_data()
-            #print(len(info['Tweets']))
+            tweets_score,info,palabras,real_info=generalmodel.prepare_data(data)
+            try:
+                palabras.to_csv(save_freq_palabras,index=False)
+                logging.debug('Guardado exitosamente tabla frecuencia palabras.')
+                tweets_score.to_csv(save_real_scores,index=False)
+                base=os.path.basename(save_real_scores)
+                real_info.to_csv(save_real_scores[:-len(base)]+'stats_'+base,index=False)             
+                logging.debug('Guardado exitosamente tabla scores tweets reales.')
+            except:
+                logging.debug('No se pudo guardar tabla frecuencia palabras.')
+                logging.debug('No se pudo guardar tabla scores tweets reales.')
+            summary.write("Cantidad tweets originales que pasaron el clasificador: " +str(len(info['Tweets'])) + "\n")
             generalmodel.create_model_tweets(info)
 
         else:
@@ -169,35 +197,73 @@ def process(log_file,
                 logging.error(msg_error)
                 raise Exception(msg_error)
 
+        if (subprocess == 'clean') & (firsttime==False) :
             last_train_period=generalmodel.tweets_model.train_period
             # nueva tanda de datos desde last_train_period[1]
             data=get_data_from_postgress(last_train_period[1])
             
             _,end=info_data(data,date_column)
+
+            
             if f_limite == None:
                 train_period=(last_train_period[0],end)
             else:
                 generalmodel.f_limite = datetime.fromisoformat(str(f_limite))
                 train_period=(f_limite,end)
-                _,info=generalmodel.prepare_data(new_data=True)
-                generalmodel.create_model_tweets(info)
+            summary.write("Periodo de entrenamiento: " +str(train_period) + "\n")
+            tweets_score,info,palabras,real_info=generalmodel.prepare_data(data,new_data=True)
+            summary.write("Cantidad tweets originales que pasaron el clasificador: " +str(len(info['Tweets'])) + "\n")
+            try:
+                palabras.to_csv(save_freq_palabras,index=False)
+                logging.debug('Guardado exitosamente tabla frecuencia palabras.')
+                tweets_score.to_csv(save_real_scores,index=False)
+                base=os.path.basename(save_real_scores)
+                real_info.to_csv(save_real_scores[:-len(base)]+'stats_'+base,index=False) 
+                logging.debug('Guardado exitosamente tabla scores tweets reales.')
+            except:
+                logging.debug('No se pudo guardar tabla frecuencia palabras.')
+                logging.debug('No se pudo guardar tabla scores tweets reales.')
+            generalmodel.create_model_tweets(info)
 
         if subprocess == "train":
-                generalmodel.train_model()
+            beta,error_Beta,param_infectious_fit,error_infectious=generalmodel.train_model()
+            summary.write("Parametros modelo tweets: \nBeta:" +str(beta) +
+                            "\nError en calculo Beta: " + str(round(error_Beta,3))+
+                            "\nEcuación de intensidades: "+ str(param_infectious_fit)+ 
+                            "\nError en calculo intensidades: "+str(round(error_infectious,3)) +"\n"
+                            )
 
         if subprocess == "predict":
             if not (hasattr(generalmodel.tweets_model,"Beta") & hasattr(generalmodel.tweets_model,"param_infectious_fit")):
                 logging.debug('El modelo debe ser entrenado primero.')
                 generalmodel.train_model()
+                summary.write("Parametros modelo tweets: \nBeta:" +str(beta) +
+                              "\nError en calculo Beta: " + str(round(error_Beta,3))+
+                              "\nEcuación de intensidades: "+ str(param_infectious_fit)+ 
+                              "\nError en calculo intensidades: "+str(round(error_infectious,3)) +"\n"
+                              )
             predict_period=tuple(predict_period.split(","))
             generalmodel.predict_model(predict_period,save_result_predict)
-        
+
+        if subprocess == "validate":
+            if valid_period != None:
+                valid_period=tuple(valid_period.split(","))
+            if generalmodel.validate_period != valid_period:
+                generalmodel.validate_period = valid_period
+            if not (hasattr(generalmodel.tweets_model,"Beta") & hasattr(generalmodel.tweets_model,"param_infectious_fit")):
+                logging.debug('El modelo debe ser entrenado primero.')
+                generalmodel.train_model()
+                summary.write("Parametros modelo tweets: \nBeta:" +str(beta) +
+                              "\nError en calculo Beta: " + str(round(error_Beta,3))+
+                              "\nEcuación de intensidades: "+ str(param_infectious_fit)+ 
+                              "\nError en calculo intensidades: "+str(round(error_infectious,3)) +"\n"
+                              )
+            errors,errors_cum=generalmodel.validation_model()
+            summary.write("Metricas de validación modelo tweets: \nMAE:" +str(errors["MAE"]) +"\nMAE acumulado:"+ str(errors_cum["MAE"])+ "\n")
         generalmodel.save_model(save_model)
-        
         logging.debug('Termino función process.')
-
+        summary.close()
         return generalmodel
-
     except Exception as e:
         msg_error = "No se completo función process"
         logging.error(msg_error)
@@ -208,8 +274,11 @@ def process(log_file,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Función ejecución proceso')
     parser.add_argument("--log_file",required=True,help="Dirección archivo de log")
+    parser.add_argument("--summary_file",required=True,help="Dirección archivo resumen procesos")
     parser.add_argument("--save_model",required=True,help="Dirección donde se guardara el archivo del modelo resultante")
-    parser.add_argument("--subprocess",required=True,help="Subproceso a ejecutar",default="clean",choices=["clean","train","predict"])
+    parser.add_argument("--subprocess",required=True,help="Subproceso a ejecutar",default="clean",choices=["clean","train","predict","validate"])
+    parser.add_argument("--save_freq_palabras",default=None,required=False,help="Dirección donde se guarda la tabla de frecuencias de las palabras de los tweets")
+    parser.add_argument("--save_real_scores",default=None,required=False,help="Dirección donde se guarda la tabla de medida de percepción de seguridad de los tweets reales")
     parser.add_argument("--predict_period",default=None,required=False,help="Periodo de predicción")
     parser.add_argument("--save_result_predict",default=None,required=False,help="Dirección donde se guarda el resultado de predicción")
     
@@ -226,13 +295,13 @@ if __name__ == "__main__":
     parser.add_argument("--path_quantify_model",default=path_quantify_model_,required=False,help="Dirección modelo cuantificación de tweets")    
     parser.add_argument("--qmodel_path",default=None,required=False,help="Dirección modelo cuantificación base de tweets")
     parser.add_argument("--score_column",default="score",required=False,help="Nombre nueva columna resultante proceso cuantificación de tweets")
-    parser.add_argument("--text_column",default=cm.text_column,required=False,help="Nombre columna que contiene eltexto de los tweets")
-    parser.add_argument("--date_column",default=cm.date_column,required=False,help="Nombre columna fechas en las que se publican los tweets")
+    parser.add_argument("--text_column",default=cm.TEXT_COLUMN,required=False,help="Nombre columna que contiene eltexto de los tweets")
+    parser.add_argument("--date_column",default=cm.DATE_COLUMN,required=False,help="Nombre columna fechas en las que se publican los tweets")
 
-    parser.add_argument("--TweetId_column",default=cm.TweetId_column,required=False,help="Nombre columna que contiene los identificadores unicos de los tweets")
-    parser.add_argument("--RT_column",default=cm.RT_column,required=False,help="Nombre columna que identifica si un tweets es original o no")
-    parser.add_argument("--IdFrom_column",default=cm.IdFrom_column,required=False,help="Nombre columna que contiene la información del id del tweet original en caso que sea retweet")
-    parser.add_argument("--followers_column",default=cm.followers_column,required=False,help="Nombre columna con el numero de seguidores de la cuenta que publica un tweet")
+    parser.add_argument("--TweetId_column",default=cm.TWEETID_COLUMN,required=False,help="Nombre columna que contiene los identificadores unicos de los tweets")
+    parser.add_argument("--RT_column",default=cm.RT_COLUMN,required=False,help="Nombre columna que identifica si un tweets es original o no")
+    parser.add_argument("--IdFrom_column",default=cm.IDFROM_COLUMNN,required=False,help="Nombre columna que contiene la información del id del tweet original en caso que sea retweet")
+    parser.add_argument("--followers_column",default=cm.FOLLOWERS_COLUMN,required=False,help="Nombre columna con el numero de seguidores de la cuenta que publica un tweet")
     parser.add_argument("--win_size_for_partition_cov",default=1,required=False,help="Tamaño en horas de la ventana temporal evaluación covariados")
     parser.add_argument("--followers_rate",default=2,required=False,help="parametro estabilizador numero de seguidores")
     parser.add_argument("--win_size_infectious_rate",default=3,required=False,help="Tamaño en horas de la ventana temporal estimacion intensidades")
@@ -244,7 +313,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     subprocess=args.subprocess
+    save_freq_palabras=args.save_freq_palabras
+    save_real_scores=args.save_real_scores
     log_file = args.log_file
+    summary_file = args.summary_file
     save_model = args.save_model
     predict_period = args.predict_period
     save_result_predict= args.save_result_predict
@@ -278,9 +350,12 @@ if __name__ == "__main__":
 
     try:
         process(log_file,
+                summary_file,
                 save_model,
                 subprocess,
                 f_limite,
+                save_freq_palabras,
+                save_real_scores,
                 predict_period,
                 save_result_predict,
                 exist_model_path,

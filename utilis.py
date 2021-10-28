@@ -99,7 +99,8 @@ def get_data_from_postgress(start_data=None,
                             table=c.TABLE_NAME,
                             user=c.USUARIO_EJECUCION,
                             password=c.PASSWORD,
-                            postgres_jar=c.PATH_POSTGRES_JAR
+                            postgres_jar=c.PATH_POSTGRES_JAR,
+                            summary=None
                             ):
     """
     Función para descargar los datos desde la base de datos postgress
@@ -118,20 +119,34 @@ def get_data_from_postgress(start_data=None,
         spark=SparkSession.builder.appName("Python Spark SQL basic example").config("spark.jars",postgres_jar).config("spark.executor.memory", "70g").config("spark.driver.memory", "50g").config("spark.memory.offHeap.enabled",True).config("spark.memory.offHeap.size","16g") .getOrCreate()
         spark.sparkContext.setLogLevel('FATAL')
         df=spark.read.format("jdbc").option("url",database_url+database).option("dbtable",table).option("user", user).option("password", password).option("driver", "org.postgresql.Driver").load()
-        df=df.withColumn(c.date_column,functions.to_timestamp(c.date_column))
+        df=df.withColumn(c.DATE_COLUMN,functions.to_timestamp(c.DATE_COLUMN))
         logging.debug('Conversión fechas a formato datetime.')
-        df = df.withColumn(c.date_column, functions.col(c.date_column) - functions.expr('INTERVAL 5 HOURS'))
+        df = df.withColumn(c.DATE_COLUMN, functions.col(c.DATE_COLUMN) - functions.expr('INTERVAL 5 HOURS'))
         if start_data != None:
-            df=df.filter(c.date_column+" > date'"+start_data+"'")
+            df=df.filter(c.DATE_COLUMN+" > date'"+start_data+"'")
 
 
         df=df.toPandas()
-        df.drop_duplicates(c.TweetId_column,inplace=True)
+        duplicates = df.duplicated().sum()
+        if summary != None:
+            summary.write("Cantidad de tweets descargados de la base de datos: "+ str(len(df)) +"\n")
+            summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0'))+"\n")
+            summary.write("Cantidad de filas duplicadas: "+ str(duplicates)+"\n")
+        
+        
+        df.drop_duplicates(c.TWEETID_COLUMN,inplace=True)
+
+        if duplicates !=0 and summary != None:
+            summary.write("Cantidad de tweets: "+ str(len(df)) + "\n")
+            summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0')) +"\n")
+
+
+
         logging.debug('Eliminación de posibles duplicados.')
-        df[c.followers_column]=pd.to_numeric(df[c.followers_column],errors="coerce")
-        df[c.followers_column].fillna(0,inplace=True)
-        df.sort_values(c.date_column,inplace=True)
-        df[c.RT_column]=df[c.IdFrom_column].apply(colum_rt)
+        df[c.FOLLOWERS_COLUMN]=pd.to_numeric(df[c.FOLLOWERS_COLUMN],errors="coerce")
+        df[c.FOLLOWERS_COLUMN].fillna(0,inplace=True)
+        df.sort_values(c.DATE_COLUMN,inplace=True)
+        df[c.RT_COLUMN]=df[c.IDFROM_COLUMNN].apply(colum_rt)
         
         logging.debug("Termino descargue de datos desde base de datos postgress")
         return df.head(100)
