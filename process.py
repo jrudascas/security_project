@@ -1,38 +1,11 @@
 import sys
+
+from scipy.optimize.nonlin import nonlin_solve
 from general_class import *
 import logging
 import argparse
 import constants_manager as cm
-from utilis import get_data_from_postgress
-
-###### variables fijas temporalmente
-path_classify_model_="/home/unal/percepcion/Resultados/1Unal/ClassificationModel.pkl"
-path_quantify_model_="/home/unal/percepcion/Resultados/1Unal/QuantificationModel.pkl"
-
-data_cov=['/home/unal/percepcion/security_project/entradas/Partidos.csv',
-          '/home/unal/percepcion/security_project/entradas/Manifestaciones.csv',
-          '/home/unal/percepcion/security_project/entradas/FechasEspeciales.csv']
-
-partidos=pd.read_csv(data_cov[0])
-manifestaciones=pd.read_csv(data_cov[1])
-f_especiales=pd.read_csv(data_cov[2])
-
-partidos_M=pd.to_datetime(partidos['Fecha'].dropna())
-partidos_S=pd.to_datetime(partidos['Fecha.1'].dropna())
-manifestaciones=pd.to_datetime(manifestaciones['Fecha'].dropna())
-f_especiales=pd.to_datetime(f_especiales[['2019','2020']].values.flatten())
-f_especiales=f_especiales[~f_especiales.isna()]
-
-def TC(t):
-    return np.array([
-                        t.weekday()/6.0,
-                        (t.hour > 12)*1,
-                        (pd.Timestamp(t.date()) == partidos_M).sum(),
-                        (pd.Timestamp(t.date()) == partidos_S).sum(),
-                        (pd.Timestamp(t.date()) == manifestaciones).sum(),
-                        #(pd.Timestamp(t.date()) == f_especiales).sum(),
-                        1
-                    ])
+from utilis import get_data_from_postgress, spark_to_pandas
 
 def info_data(data,column_date):
     data_=data.copy()
@@ -40,6 +13,20 @@ def info_data(data,column_date):
     min_,max_=data_[column_date].min(),data_[column_date].max()
     return str(min_),str(max_)
 
+def TC(t,data_cov):
+    return np.array([
+                        t.weekday()/6.0,
+                        (t.hour > 12)*1,
+                        pd.Timestamp(t.date()) in data_cov[(data_cov[cm.COVARIATE_COLUMN] == 'Partido') & (data_cov[cm.PARTICULAR_COV_COLUMN] == 'Millonarios')][cm.DATE_COLUMN_COV].values,
+                        pd.Timestamp(t.date()) in data_cov[(data_cov[cm.COVARIATE_COLUMN] == 'Partido') & (data_cov[cm.PARTICULAR_COV_COLUMN] == 'Santa Fé')][cm.DATE_COLUMN_COV].values,
+                        pd.Timestamp(t.date()) in data_cov[data_cov[cm.COVARIATE_COLUMN] == 'Manifestaciones'][cm.DATE_COLUMN_COV].values,
+                        #pd.Timestamp(t.date()) in data_cov[data_cov[cm.COVARIATE_COLUMN] == 'Festividad'][cm.DATE_COLUMN_COV].values,
+                        1
+                    ])
+
+
+def update_covariados(data_cov):
+    return lambda t:TC(t,data_cov)
 
 
 def process(log_file,
@@ -53,14 +40,14 @@ def process(log_file,
             save_result_predict=None,
             exist_model_path=None,
             valid_period=None,
-            path_classify_model=path_classify_model_,
+            path_classify_model=None,
             keywords_path=None,
             vectors_path=None,
             cmodel_path=None,
             predict_column=None,
             data_to_train_clasify=None,
             percent_val_data=0.3,
-            path_quantify_model=path_quantify_model_,
+            path_quantify_model=None,
             qmodel_path=None,
             score_column=cm.SCORE_COLUMN,
             text_column=cm.TEXT_COLUMN,
@@ -93,6 +80,8 @@ def process(log_file,
                 summary.write(str(i)+": "+str(locals_[i])+"\n")
         
         firsttime=False
+
+
 
         if exist_model_path == None:
             firsttime=True
@@ -145,7 +134,7 @@ def process(log_file,
             ## modelo tweets
 
             ## lectura datos
-            data=get_data_from_postgress(summary=summary)
+            data=spark_to_pandas(get_data_from_postgress(),summary=summary)
             train_period=info_data(data,date_column)
             summary.write("Periodo de entrenamiento: " +str(train_period) + "\n")
             if f_limite == None:
@@ -153,6 +142,10 @@ def process(log_file,
 
             if valid_period != None:
                 valid_period=tuple(valid_period.split(","))
+            
+            
+            data_cov=spark_to_pandas(get_data_from_postgress(table=cm.DATABASE_COVARIADOS),start_data=f_limite,tipe='cov')
+            
 
             generalmodel=modelPercepcion(classify_model,
                                          quantify_model,
@@ -165,7 +158,7 @@ def process(log_file,
                                          date_column,
                                          followers_column,
                                          score_column,
-                                         f_covariates=(TC,restore_date),
+                                         f_covariates=(update_covariados(data_cov),restore_date),
                                          win_size_for_partition_cov=win_size_for_partition_cov,
                                          followers_rate=followers_rate,
                                          win_size_infectious_rate = win_size_infectious_rate,
@@ -191,6 +184,14 @@ def process(log_file,
             try:
                 with open(exist_model_path, "rb") as input_file:
                         generalmodel = dill.load(input_file)
+
+                #########################
+                data_cov=spark_to_pandas(get_data_from_postgress(table=cm.DATABASE_COVARIADOS),start_data=f_limite,tipe='cov') 
+                f_covariates=(update_covariados(data_cov),restore_date)
+                generalmodel.f_covariates = f_covariates
+                if hasattr(generalmodel,"tweets_model"):
+                    generalmodel.tweets_model.f_covariates = lambda a : f_covariates[0](f_covariates[1](a,generalmodel.tweets_model.f_inicio))
+                #######################
                 logging.debug('Modelo percepción de seguridad existente cargado exitosamente.')
             except Exception:
                 msg_error="No se encontro modelo existente con la dirección establecida."
@@ -200,7 +201,7 @@ def process(log_file,
         if (subprocess == 'clean') & (firsttime==False) :
             last_train_period=generalmodel.tweets_model.train_period
             # nueva tanda de datos desde last_train_period[1]
-            data=get_data_from_postgress(last_train_period[1])
+            data=spark_to_pandas(get_data_from_postgress(),last_train_period[1],summary=summary)
             
             _,end=info_data(data,date_column)
 
@@ -285,14 +286,14 @@ if __name__ == "__main__":
     parser.add_argument("--f_limite",default=None,required=False,help="Fecha limite")
     parser.add_argument("--exist_model_path",default=None,required=False,help="Dirección modelo previo existente")
     parser.add_argument("--valid_period",default=None,required=False,help="Perido de validación modelo")
-    parser.add_argument("--path_classify_model",default=path_classify_model_,required=False,help="Dirección modelo clasificación de tweets")
+    parser.add_argument("--path_classify_model",default=None,required=False,help="Dirección modelo clasificación de tweets")
     parser.add_argument("--keywords_path",default=None,required=False,help="Dirección keywords para modelo clasificación de tweets")
     parser.add_argument("--vectors_path",default=None,required=False,help="Dirección archivo vectores palabras para modelo clasificación de tweets")
     parser.add_argument("--cmodel_path",default=None,required=False,help="Dirección modelo clasificación base de tweets")
     parser.add_argument("--predict_column",default=None,required=False,help="Nombre columna objetivo entrenamiento modelo clasificación de tweets")
     parser.add_argument("--data_to_train_clasify",default=None,required=False,help="Dirección archivo csv para entrenar modelo clasificación de tweets")
     parser.add_argument("--percent_val_data",default=0.3,required=False,help="Porcentaje datos de validación para modelo clasificación de tweets")
-    parser.add_argument("--path_quantify_model",default=path_quantify_model_,required=False,help="Dirección modelo cuantificación de tweets")    
+    parser.add_argument("--path_quantify_model",default=None,required=False,help="Dirección modelo cuantificación de tweets")    
     parser.add_argument("--qmodel_path",default=None,required=False,help="Dirección modelo cuantificación base de tweets")
     parser.add_argument("--score_column",default="score",required=False,help="Nombre nueva columna resultante proceso cuantificación de tweets")
     parser.add_argument("--text_column",default=cm.TEXT_COLUMN,required=False,help="Nombre columna que contiene eltexto de los tweets")

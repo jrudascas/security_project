@@ -93,64 +93,87 @@ def colum_rt(input_):
         return 1
 
 
-def get_data_from_postgress(start_data=None,
-                            database_url=c.URL_POSTGRES,
+def get_data_from_postgress(database_url=c.URL_POSTGRES,
                             database=c.DATABASE_NAME,
                             table=c.TABLE_NAME,
                             user=c.USUARIO_EJECUCION,
                             password=c.PASSWORD,
                             postgres_jar=c.PATH_POSTGRES_JAR,
-                            summary=None
                             ):
     """
     Función para descargar los datos desde la base de datos postgress
 
-    :param start_data: string fecha inicio de los datos
     :param database_url: string dirección url de la base de datos
     :param database: string nombre base de datos
     :param table: string nombre de la tabla
     :param user: string nombre usuario
     :param password: string password
     :param postgres_jar: string dirección postgress jar
-    :return: pandas dataframe con los datos descargados
+    :return: pyspark dataframe
     """
     try:
         logging.debug("Empezo descargue de datos desde base de datos postgress")
         spark=SparkSession.builder.appName("Python Spark SQL basic example").config("spark.jars",postgres_jar).config("spark.executor.memory", "70g").config("spark.driver.memory", "50g").config("spark.memory.offHeap.enabled",True).config("spark.memory.offHeap.size","16g") .getOrCreate()
         spark.sparkContext.setLogLevel('FATAL')
         df=spark.read.format("jdbc").option("url",database_url+database).option("dbtable",table).option("user", user).option("password", password).option("driver", "org.postgresql.Driver").load()
-        df=df.withColumn(c.DATE_COLUMN,functions.to_timestamp(c.DATE_COLUMN))
+        logging.debug("Termino descargue de datos desde base de datos postgress")
+        return df
+    except:
+        msg_error="No se completo la descarga de datos desde la base de datos"
+        logging.debug(msg_error)
+        raise Exception(msg_error)
+
+
+
+def spark_to_pandas(df,
+                    start_data=None,
+                    tipe="tweets",
+                    summary=None
+                    ):
+    """
+    Función para convertir los datos descargados al formato necesario
+    :param df: spark dataframe
+    :param start_data: string fecha inicio de los datos
+    :param summary: summary  file    
+    :return: pandas dataframe con los datos descargados
+    """
+    try:
+        logging.debug("Empezo proceso incial de datos descargados desde base de datos postgress")
+        date_c = c.DATE_COLUMN
+        if tipe == "cov":
+            date_c = "FECHA"
+
+
+        df=df.withColumn(date_c,functions.to_timestamp(date_c,'yyyy-MM-dd HH:mm:ss.SSS'))
         logging.debug('Conversión fechas a formato datetime.')
-        df = df.withColumn(c.DATE_COLUMN, functions.col(c.DATE_COLUMN) - functions.expr('INTERVAL 5 HOURS'))
+        if tipe == "tweets":
+            df = df.withColumn(c.DATE_COLUMN, functions.col(c.DATE_COLUMN) - functions.expr('INTERVAL 5 HOURS'))
         if start_data != None:
-            df=df.filter(c.DATE_COLUMN+" > date'"+start_data+"'")
+            df=df.filter(date_c+" > date'"+start_data+"'")
 
 
         df=df.toPandas()
-        duplicates = df.duplicated().sum()
-        if summary != None:
-            summary.write("Cantidad de tweets descargados de la base de datos: "+ str(len(df)) +"\n")
-            summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0'))+"\n")
-            summary.write("Cantidad de filas duplicadas: "+ str(duplicates)+"\n")
-        
-        
-        df.drop_duplicates(c.TWEETID_COLUMN,inplace=True)
+        if tipe == "tweets":
+            duplicates = df.duplicated().sum()
+            if summary != None:
+                summary.write("Cantidad de tweets descargados de la base de datos: "+ str(len(df)) +"\n")
+                summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0'))+"\n")
+                summary.write("Cantidad de filas duplicadas: "+ str(duplicates)+"\n")   
+            df.drop_duplicates(c.TWEETID_COLUMN,inplace=True)
 
-        if duplicates !=0 and summary != None:
-            summary.write("Cantidad de tweets: "+ str(len(df)) + "\n")
-            summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0')) +"\n")
+            if duplicates !=0 and summary != None:
+                summary.write("Cantidad de tweets: "+ str(len(df)) + "\n")
+                summary.write("Cantidad de tweets originales: "+ str(sum(df[c.IDFROM_COLUMNN]=='0')) +"\n")
 
-
-
-        logging.debug('Eliminación de posibles duplicados.')
-        df[c.FOLLOWERS_COLUMN]=pd.to_numeric(df[c.FOLLOWERS_COLUMN],errors="coerce")
-        df[c.FOLLOWERS_COLUMN].fillna(0,inplace=True)
-        df.sort_values(c.DATE_COLUMN,inplace=True)
-        df[c.RT_COLUMN]=df[c.IDFROM_COLUMNN].apply(colum_rt)
-        
-        logging.debug("Termino descargue de datos desde base de datos postgress")
-        return df.head(100)
+            logging.debug('Eliminación de posibles duplicados.')
+            df[c.FOLLOWERS_COLUMN]=pd.to_numeric(df[c.FOLLOWERS_COLUMN],errors="coerce")
+            df[c.FOLLOWERS_COLUMN].fillna(0,inplace=True)
+            df.sort_values(c.DATE_COLUMN,inplace=True)
+            df[c.RT_COLUMN]=df[c.IDFROM_COLUMNN].apply(colum_rt)
+            
+        logging.debug("Termino proceso incial de datos descargados desde base de datos postgress")
+        return df#.head(100)
     except:
-        msg_error="No se completo la descarga de datos desde la base de datos"
+        msg_error="No se completo la conversion de los datos descargados"
         logging.debug(msg_error)
         raise Exception(msg_error)

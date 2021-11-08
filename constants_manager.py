@@ -34,3 +34,7 @@ RT_COLUMN = "IsRetweet"
 IDFROM_COLUMNN = "num_retweet"
 FOLLOWERS_COLUMN = "num_followers"
 SCORE_COLUMN = "score"
+DATABASE_COVARIADOS = 'data_covariados_percepcion'
+DATE_COLUMN_COV = 'FECHA'
+COVARIATE_COLUMN = 'covariado'
+PARTICULAR_COV_COLUMN = 'particular'

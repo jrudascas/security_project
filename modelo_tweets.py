@@ -427,11 +427,12 @@ def sigmoid_foll(foll,exp=3):
     :param exp: umbral de normalizacion
     :return: vector seguidores normalizado
     """     
-    #2/(1+np.exp(-10**(-exp)*foll))-1
     try:
         f=foll.copy()
-        f[f>10**exp]=10**exp
-        return f
+        m=10**exp
+        a=2*m
+        # f[f>10**exp]=10**exp
+        return a*(1/(1+np.exp(-2/m*f)))-a/2#f
     except:
         msg_error="No se completo operación en la funcion  sigmoid_foll"
         logging.error(msg_error)
