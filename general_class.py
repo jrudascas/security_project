@@ -115,7 +115,7 @@ class modelPercepcion(modeloBase):
             
             tweets_score=self.quantify_model.quantify_df(df[df[self.TweetId_column].isin(pass_id)])
 
-            palabras=pd.DataFrame(FreqDist(freq_dist_tok(preprocessing(tweets_score[TEXT_COLUMN]))).items(), columns=['Palabras', 'Fecuencia']).sort_values("Fecuencia")
+            palabras=pd.DataFrame(FreqDist(freq_dist_tok(preprocessing(tweets_score[TEXT_COLUMN]))).items(), columns=['Palabras', 'Frecuencia']).sort_values("Frecuencia",ascending=False)
 
             real_info=tweets_score.groupby([tweets_score[DATE_COLUMN].dt.date]).agg({TWEETID_COLUMN:['count'],SCORE_COLUMN:['mean','std']}).reset_index()
             
@@ -282,9 +282,9 @@ class modelPercepcion(modeloBase):
                 update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
                 raise Exception("No se ha establecido el periodo de validación")
             else:
-                errors,errors_cum=self.tweets_model.validate(self.validate_period)
+                self.errors,self.errors_cum=self.tweets_model.validate(self.validate_period)
                 update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
-                return errors,errors_cum
+                return self.errors,self.errors_cum
         except Exception as e:
             update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             msg_error="No se pudo terminar el proceso de validación de la predicción"
