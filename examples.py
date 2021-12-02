@@ -46,9 +46,10 @@ def example3():
               "--exist_model_path "+os.path.join(examples_path,"modelPoS.pkl") +" "+ 
               "--save_model "+os.path.join(examples_path,"modelPoS.pkl") +" "+
               "--subprocess 'predict' " +
-              "--predict_period '2019-03-21 00:00:00,2019-03-23 00:00:00' " +
-              #"--predict_period '2019-05-21 04:00:00,2019-05-30 00:00:00' " +
-              "--save_result_predict "+os.path.join(examples_path,"predict.csv") +" "
+            #   "--predict_period '2019-03-21 00:00:00,2019-03-23 00:00:00' " +
+              "--predict_period '2020-04-28 00:00:00,2020-05-05 00:00:00' " +
+              "--save_result_predict "+os.path.join(examples_path,"predict.csv") +" " +
+              "--win_size_pred_period 8.5"
               )
 
 def example4():
@@ -59,7 +60,7 @@ def example4():
               "--exist_model_path "+os.path.join(examples_path,"modelPoS.pkl") +" "+ 
               "--save_model "+os.path.join(examples_path,"modelPoS.pkl") +" "+
               "--subprocess 'validate' " +
-              "--valid_period '2019-03-19 00:00:00,2019-03-20 00:00:00' "
+              "--valid_period '2020-03-10 00:00:00,2020-03-20 00:00:00' "
               )
 
 def example5():
@@ -77,21 +78,21 @@ def example5():
               )
                   
 
-start = timeit.default_timer()
-example1()
-clean = timeit.default_timer()
-example2()
-train = timeit.default_timer()
+# start = timeit.default_timer()
+# example1()
+# clean = timeit.default_timer()
+# example2()
+# train = timeit.default_timer()
 example3()
-predict = timeit.default_timer()
-example4()
-validate = timeit.default_timer()
-example5()
-download = timeit.default_timer()
+# predict = timeit.default_timer()
+# example4()
+# validate = timeit.default_timer()
+# example5()
+# download = timeit.default_timer()
 
 
-print('Time clean: ', clean - start)  
-print('Time train: ', train - clean)  
-print('Time predict: ', predict - train)  
-print('Time validation: ', validate - predict)  
-print('Time dowload: ', download - validate)  
+# print('Time clean: ', clean - start)  
+# print('Time train: ', train - clean)  
+# print('Time predict: ', predict - train)  
+# print('Time validation: ', validate - predict)  
+# print('Time dowload: ', download - validate)  

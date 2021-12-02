@@ -1015,7 +1015,9 @@ class modelTweets:
         try:
             start = date_to_hours(dates[0],self.f_inicio)
             end = date_to_hours(dates[1],self.f_inicio)   
-            t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+            # t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+            t_pred = np.arange(start,end,self.win_size_pred_period)
+            t_pred= np.concatenate((t_pred,[end]))
 
             self.lambda_predict = lambda_pred(t_pred,
                                               self.keys_train,

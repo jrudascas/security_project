@@ -1,6 +1,6 @@
+from operator import ge
 import sys
 
-from scipy.optimize.nonlin import nonlin_solve
 from general_class import *
 import logging
 import argparse
@@ -227,6 +227,27 @@ def process(log_file,
             generalmodel.create_model_tweets(info)
 
         if subprocess == "train":
+            
+            if generalmodel.win_size_for_partition_cov != win_size_for_partition_cov:
+                generalmodel.win_size_for_partition_cov = win_size_for_partition_cov
+                generalmodel.tweets_model.win_size_for_partition_cov = win_size_for_partition_cov
+
+            if generalmodel.followers_rate != followers_rate:
+                generalmodel.followers_rate = followers_rate
+                generalmodel.tweets_model.followers_rate = followers_rate
+
+            if generalmodel.win_size_infectious_rate != win_size_infectious_rate:
+                generalmodel.win_size_infectious_rate = win_size_infectious_rate
+                generalmodel.tweets_model.win_size_infectious_rate = win_size_infectious_rate
+
+            if generalmodel.win_size_train_period != win_size_train_period:
+                generalmodel.win_size_train_period = win_size_train_period
+                generalmodel.tweets_model.win_size_train_period = win_size_train_period
+
+
+
+
+
             beta,error_Beta,param_infectious_fit,error_infectious=generalmodel.train_model()
             summary.write("Parametros modelo tweets: \nBeta:" +str(beta) +
                             "\nError en calculo Beta: " + str(round(error_Beta,3))+
@@ -235,6 +256,17 @@ def process(log_file,
                             )
 
         if subprocess == "predict":
+
+            if generalmodel.win_size_pred_period != win_size_pred_period:
+                generalmodel.win_size_pred_period = win_size_pred_period
+                generalmodel.tweets_model.win_size_pred_period = win_size_pred_period
+            
+            if generalmodel.method_pred != method_pred:
+                generalmodel.method_pred = method_pred
+                generalmodel.tweets_model.method_pred = method_pred
+            
+            
+
             if not (hasattr(generalmodel.tweets_model,"Beta") & hasattr(generalmodel.tweets_model,"param_infectious_fit")):
                 logging.debug('El modelo debe ser entrenado primero.')
                 generalmodel.train_model()
@@ -247,6 +279,14 @@ def process(log_file,
             generalmodel.predict_model(predict_period,save_result_predict)
 
         if subprocess == "validate":
+            if generalmodel.win_size_pred_period != win_size_pred_period:
+                generalmodel.win_size_pred_period = win_size_pred_period
+                generalmodel.tweets_model.win_size_pred_period = win_size_pred_period
+
+            if generalmodel.method_pred != method_pred:
+                generalmodel.method_pred = method_pred
+                generalmodel.tweets_model.method_pred = method_pred
+
             if valid_period != None:
                 valid_period=tuple(valid_period.split(","))
             if generalmodel.validate_period != valid_period:
@@ -273,42 +313,61 @@ def process(log_file,
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Función ejecución proceso')
-    parser.add_argument("--log_file",required=True,help="Dirección archivo de log")
-    parser.add_argument("--summary_file",required=True,help="Dirección archivo resumen procesos")
-    parser.add_argument("--save_model",required=True,help="Dirección donde se guardara el archivo del modelo resultante")
-    parser.add_argument("--subprocess",required=True,help="Subproceso a ejecutar",default="clean",choices=["clean","train","predict","validate"])
-    parser.add_argument("--save_freq_palabras",default=None,required=False,help="Dirección donde se guarda la tabla de frecuencias de las palabras de los tweets")
-    parser.add_argument("--save_real_scores",default=None,required=False,help="Dirección donde se guarda la tabla de medida de percepción de seguridad de los tweets reales")
-    parser.add_argument("--predict_period",default=None,required=False,help="Periodo de predicción")
-    parser.add_argument("--save_result_predict",default=None,required=False,help="Dirección donde se guarda el resultado de predicción")
-    
-    parser.add_argument("--f_limite",default=None,required=False,help="Fecha limite")
-    parser.add_argument("--exist_model_path",default=None,required=False,help="Dirección modelo previo existente")
-    parser.add_argument("--valid_period",default=None,required=False,help="Perido de validación modelo")
-    parser.add_argument("--path_classify_model",default=None,required=False,help="Dirección modelo clasificación de tweets")
-    parser.add_argument("--keywords_path",default=None,required=False,help="Dirección keywords para modelo clasificación de tweets")
-    parser.add_argument("--vectors_path",default=None,required=False,help="Dirección archivo vectores palabras para modelo clasificación de tweets")
-    parser.add_argument("--cmodel_path",default=None,required=False,help="Dirección modelo clasificación base de tweets")
-    parser.add_argument("--predict_column",default=None,required=False,help="Nombre columna objetivo entrenamiento modelo clasificación de tweets")
-    parser.add_argument("--data_to_train_clasify",default=None,required=False,help="Dirección archivo csv para entrenar modelo clasificación de tweets")
-    parser.add_argument("--percent_val_data",default=0.3,required=False,help="Porcentaje datos de validación para modelo clasificación de tweets")
-    parser.add_argument("--path_quantify_model",default=None,required=False,help="Dirección modelo cuantificación de tweets")    
-    parser.add_argument("--qmodel_path",default=None,required=False,help="Dirección modelo cuantificación base de tweets")
-    parser.add_argument("--score_column",default="score",required=False,help="Nombre nueva columna resultante proceso cuantificación de tweets")
-    parser.add_argument("--text_column",default=cm.TEXT_COLUMN,required=False,help="Nombre columna que contiene eltexto de los tweets")
-    parser.add_argument("--date_column",default=cm.DATE_COLUMN,required=False,help="Nombre columna fechas en las que se publican los tweets")
 
-    parser.add_argument("--TweetId_column",default=cm.TWEETID_COLUMN,required=False,help="Nombre columna que contiene los identificadores unicos de los tweets")
-    parser.add_argument("--RT_column",default=cm.RT_COLUMN,required=False,help="Nombre columna que identifica si un tweets es original o no")
-    parser.add_argument("--IdFrom_column",default=cm.IDFROM_COLUMNN,required=False,help="Nombre columna que contiene la información del id del tweet original en caso que sea retweet")
-    parser.add_argument("--followers_column",default=cm.FOLLOWERS_COLUMN,required=False,help="Nombre columna con el numero de seguidores de la cuenta que publica un tweet")
-    parser.add_argument("--win_size_for_partition_cov",default=1,required=False,help="Tamaño en horas de la ventana temporal evaluación covariados")
-    parser.add_argument("--followers_rate",default=2,required=False,help="parametro estabilizador numero de seguidores")
-    parser.add_argument("--win_size_infectious_rate",default=3,required=False,help="Tamaño en horas de la ventana temporal estimacion intensidades")
-    parser.add_argument("--win_size_train_period",default=1,required=False,help="Tamaño en horas de las ventanas de tiempo en el perido de entrenamiento")
-    parser.add_argument("--win_size_pred_period",default=1,required=False,help="Tamaño en horas de las ventanas de tiempo en el perido de predicción")
-    parser.add_argument("--method_pred",default="integral",required=False,choices=["integral","thinning"],help="Nombre metodo de predicción")
+    def check_positive(value):
+        try:
+            value = float(value)
+            if value <= 0:
+                raise argparse.ArgumentTypeError("{} is not a positive number".format(value))
+        except ValueError:
+            raise argparse.ArgumentTypeError("{} is not an number".format(value))
+        return value
+
+    def check_max(value):
+        try:
+            value = check_positive(value)
+            if value > 1:
+                raise argparse.ArgumentTypeError("{} is greater than 1".format(value))
+        except ValueError:
+            raise argparse.ArgumentTypeError("{} is not an number".format(value))
+        return value
+
+    parser = argparse.ArgumentParser(description='Función ejecución proceso')
+    parser.add_argument("--log_file",required=True,type=str,help="Dirección archivo de log")
+    parser.add_argument("--summary_file",required=True,type=str,help="Dirección archivo resumen procesos")
+    parser.add_argument("--save_model",required=True,type=str,help="Dirección donde se guardara el archivo del modelo resultante")
+    parser.add_argument("--subprocess",required=True,type=str,help="Subproceso a ejecutar",default="clean",choices=["clean","train","predict","validate"])
+    parser.add_argument("--save_freq_palabras",type=str,default=None,required=False,help="Dirección donde se guarda la tabla de frecuencias de las palabras de los tweets")
+    parser.add_argument("--save_real_scores",type=str,default=None,required=False,help="Dirección donde se guarda la tabla de medida de percepción de seguridad de los tweets reales")
+    parser.add_argument("--predict_period",type=str,default=None,required=False,help="Periodo de predicción")
+    parser.add_argument("--save_result_predict",type=str,default=None,required=False,help="Dirección donde se guarda el resultado de predicción")
+    
+    parser.add_argument("--f_limite",type=str,default=None,required=False,help="Fecha limite")
+    parser.add_argument("--exist_model_path",type=str,default=None,required=False,help="Dirección modelo previo existente")
+    parser.add_argument("--valid_period",type=str,default=None,required=False,help="Perido de validación modelo")
+    parser.add_argument("--path_classify_model",type=str,default=None,required=False,help="Dirección modelo clasificación de tweets")
+    parser.add_argument("--keywords_path",type=str,default=None,required=False,help="Dirección keywords para modelo clasificación de tweets")
+    parser.add_argument("--vectors_path",type=str,default=None,required=False,help="Dirección archivo vectores palabras para modelo clasificación de tweets")
+    parser.add_argument("--cmodel_path",type=str,default=None,required=False,help="Dirección modelo clasificación base de tweets")
+    parser.add_argument("--predict_column",type=str,default=None,required=False,help="Nombre columna objetivo entrenamiento modelo clasificación de tweets")
+    parser.add_argument("--data_to_train_clasify",type=str,default=None,required=False,help="Dirección archivo csv para entrenar modelo clasificación de tweets")
+    parser.add_argument("--percent_val_data",type=check_max,default=0.3,required=False,help="Porcentaje datos de validación para modelo clasificación de tweets")
+    parser.add_argument("--path_quantify_model",type=str,default=None,required=False,help="Dirección modelo cuantificación de tweets")    
+    parser.add_argument("--qmodel_path",type=str,default=None,required=False,help="Dirección modelo cuantificación base de tweets")
+    parser.add_argument("--score_column",type=str,default="score",required=False,help="Nombre nueva columna resultante proceso cuantificación de tweets")
+    parser.add_argument("--text_column",type=str,default=cm.TEXT_COLUMN,required=False,help="Nombre columna que contiene eltexto de los tweets")
+    parser.add_argument("--date_column",type=str,default=cm.DATE_COLUMN,required=False,help="Nombre columna fechas en las que se publican los tweets")
+
+    parser.add_argument("--TweetId_column",type=str,default=cm.TWEETID_COLUMN,required=False,help="Nombre columna que contiene los identificadores unicos de los tweets")
+    parser.add_argument("--RT_column",type=str,default=cm.RT_COLUMN,required=False,help="Nombre columna que identifica si un tweets es original o no")
+    parser.add_argument("--IdFrom_column",type=str,default=cm.IDFROM_COLUMNN,required=False,help="Nombre columna que contiene la información del id del tweet original en caso que sea retweet")
+    parser.add_argument("--followers_column",type=str,default=cm.FOLLOWERS_COLUMN,required=False,help="Nombre columna con el numero de seguidores de la cuenta que publica un tweet")
+    parser.add_argument("--win_size_for_partition_cov",type=check_positive,default=1,required=False,help="Tamaño en horas de la ventana temporal evaluación covariados")
+    parser.add_argument("--followers_rate",type=check_positive,default=2,required=False,help="parametro estabilizador numero de seguidores")
+    parser.add_argument("--win_size_infectious_rate",type=check_positive,default=3,required=False,help="Tamaño en horas de la ventana temporal estimacion intensidades")
+    parser.add_argument("--win_size_train_period",type=check_positive,default=1,required=False,help="Tamaño en horas de las ventanas de tiempo en el perido de entrenamiento")
+    parser.add_argument("--win_size_pred_period",type=check_positive,default=1,required=False,help="Tamaño en horas de las ventanas de tiempo en el perido de predicción")
+    parser.add_argument("--method_pred",type=str,default="integral",required=False,choices=["integral","thinning"],help="Nombre metodo de predicción")
 
 
 

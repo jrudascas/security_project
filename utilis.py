@@ -172,7 +172,7 @@ def spark_to_pandas(df,
             df[c.RT_COLUMN]=df[c.IDFROM_COLUMNN].apply(colum_rt)
             
         logging.debug("Termino proceso incial de datos descargados desde base de datos postgress")
-        return df.head(100)
+        return df
     except:
         msg_error="No se completo la conversion de los datos descargados"
         logging.debug(msg_error)
