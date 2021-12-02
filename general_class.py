@@ -5,8 +5,8 @@ from quantifier_class import *
 from lexicon_analysis import *
 import os.path
 from utilis import get_estados_ejecucion, get_tipos_proceso, get_token_acces, update_process_state
-from constants_manager import ESTADO_EXITO, ESTADO_ERROR, ESTADO_PROCESO, ESTADO_CANCELADO, NAME_PREDICCION,NAME_ENTRENAMIENTO, NAME_VALIDACION, NAME_PREPROCESAMIENTO
-from constants_manager import TweetId_column,RT_column,IdFrom_column,date_column,followers_column,score_column
+from constants_manager import ESTADO_EXITO, ESTADO_ERROR, ESTADO_PROCESO, ESTADO_CANCELADO, NAME_PREDICCION,NAME_ENTRENAMIENTO, NAME_VALIDACION, NAME_PREPROCESAMIENTO, TEXT_COLUMN
+from constants_manager import TWEETID_COLUMN,RT_COLUMN,IDFROM_COLUMNN,DATE_COLUMN,FOLLOWERS_COLUMN,SCORE_COLUMN
 import logging
 import dill
 class modeloBase:
@@ -26,18 +26,17 @@ class modelPercepcion(modeloBase):
     con seguridad, cuantificacion de los tweets clasificados y prediccion de la serie de tiempo en tiempo futuro.
     """    
     def __init__(self,
-                 original_data,
                  classify_model,
                  quantify_model,
                  train_period,
                  val_period=None,
                  f_limite=None,
-                 TweetId_column=TweetId_column,
-                 RT_column=RT_column,
-                 IdFrom_column=IdFrom_column,
-                 date_column=date_column,              
-                 followers_column=followers_column,
-                 score_column=score_column,         
+                 TweetId_column=TWEETID_COLUMN,
+                 RT_column=RT_COLUMN,
+                 IdFrom_column=IDFROM_COLUMNN,
+                 date_column=DATE_COLUMN,              
+                 followers_column=FOLLOWERS_COLUMN,
+                 score_column=SCORE_COLUMN,         
                  tweets_model_base=modelTweets,
                  f_covariates=(T_c,restore_date),
                  win_size_for_partition_cov=1,
@@ -53,7 +52,6 @@ class modelPercepcion(modeloBase):
         self.estados_ejecucion=get_estados_ejecucion(get_token_acces())
 
         try:
-            self.original_data=original_data
             self.RT_column=RT_column
             self.TweetId_column=TweetId_column
             self.date_column=date_column
@@ -92,7 +90,7 @@ class modelPercepcion(modeloBase):
         except Exception as e:
             raise Exception(e)
     
-    def prepare_data(self,new_data=False):
+    def prepare_data(self,data,new_data=False):
         """
         Preprocesamiento de los datos y formateo para que queden listos para la entrada del modelo final
         :return: 
@@ -100,7 +98,7 @@ class modelPercepcion(modeloBase):
         logging.debug('Empezo proceso preparación de los datos.')
         update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_PROCESO], get_token_acces())
         try:
-            df=self.original_data.copy()
+            df=data.copy()
             df=df[df[self.date_column] >= self.f_limite]
             
             #tweets originales
@@ -116,6 +114,10 @@ class modelPercepcion(modeloBase):
             pass_id=self.classify_model.clasify_df(data_to_filter)[self.TweetId_column].values
             
             tweets_score=self.quantify_model.quantify_df(df[df[self.TweetId_column].isin(pass_id)])
+
+            palabras=pd.DataFrame(FreqDist(freq_dist_tok(preprocessing(tweets_score[TEXT_COLUMN]))).items(), columns=['Palabras', 'Frecuencia']).sort_values("Frecuencia",ascending=False)
+
+            real_info=tweets_score.groupby([tweets_score[DATE_COLUMN].dt.date]).agg({TWEETID_COLUMN:['count'],SCORE_COLUMN:['mean','std']}).reset_index()
             
 
             Orig_id=tweets_score[tweets_score[self.RT_column] == 0][self.TweetId_column].values
@@ -151,7 +153,7 @@ class modelPercepcion(modeloBase):
 
             logging.debug('Conversión tablas a diccionario como entrada modelo predicción tweets.')
             logging.debug('Termino proceso preparación de los datos.')
-            return tweets_score,info
+            return tweets_score,info,palabras,real_info
         except Exception as e:
             update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             raise Exception(e)
@@ -159,11 +161,11 @@ class modelPercepcion(modeloBase):
     def create_model_tweets(self,data):
         logging.debug('Empezo proceso creación modelo de tweets.')
         try:
-            if hasattr(self,"dict_data"):
+            if hasattr(self,"tweets_model"):
                 
-                last=self.dict_data
+                last={'Inicio':self.tweets_model.f_inicio,'Tweets':self.tweets_model.Tweets}
                 if last['Inicio'] < self.f_limite:
-                    diff=(self.f_limite-last['Inicio']).dt.total_seconds()/3600
+                    diff=(self.f_limite-last['Inicio']).total_seconds()/3600
                     last['Inicio']=self.f_limite
                     to_drop=[]
                     for t in last['Tweets']:
@@ -179,7 +181,7 @@ class modelPercepcion(modeloBase):
                 new={}         
                 new['Inicio'] = last['Inicio']
                 new['Tweets']={}
-                diff=(new['Inicio']-data['Inicio']).dt.total_seconds()/3600
+                diff=(new['Inicio']-data['Inicio']).total_seconds()/3600
                 to_drop_new=[]
                 for t in last['Tweets']:
                     new['Tweets'][t] = last['Tweets'][t]
@@ -199,7 +201,6 @@ class modelPercepcion(modeloBase):
 
             self.tweets_model = self.tweets_model_base(new,
                                                     self.train_period,
-                                                    self.validate_period,
                                                     f_covariates=self.f_covariates,
                                                     win_size_for_partition_cov=self.win_size_for_partition_cov,
                                                     followers_rate=self.followers_rate,
@@ -208,7 +209,7 @@ class modelPercepcion(modeloBase):
                                                     win_size_pred_period = self.win_size_pred_period,
                                                     method_pred = self.method_pred)
             logging.debug('Objeto modelo tweets creado.')
-            self.dict_data=new
+            #self.dict_data=new
             update_process_state(self.tipos_proceso[NAME_PREPROCESAMIENTO], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
             return self.tweets_model
         except Exception as e:
@@ -230,7 +231,7 @@ class modelPercepcion(modeloBase):
             self.tweets_model.train()
             logging.debug('Termino entrenamiento modelo percepción de seguridad.')
             update_process_state(self.tipos_proceso[NAME_ENTRENAMIENTO], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
-            return self.tweets_model.Beta, self.tweets_model.param_infectious_fit
+            return self.tweets_model.Beta, self.tweets_model.error_Beta,self.tweets_model.param_infectious_fit,self.tweets_model.error_infectious
             
         except Exception as e:
             update_process_state(self.tipos_proceso[NAME_ENTRENAMIENTO], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
@@ -281,9 +282,9 @@ class modelPercepcion(modeloBase):
                 update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
                 raise Exception("No se ha establecido el periodo de validación")
             else:
-                self.tweets_model.compute_errors()
+                self.errors,self.errors_cum=self.tweets_model.validate(self.validate_period)
                 update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
-                return self.tweets_model.errors_predict
+                return self.errors,self.errors_cum
         except Exception as e:
             update_process_state(self.tipos_proceso[NAME_VALIDACION], self.estados_ejecucion[ESTADO_ERROR], get_token_acces())
             msg_error="No se pudo terminar el proceso de validación de la predicción"

@@ -291,3 +291,8 @@ def get_metrics(true_labels, predicted_labels,clasificador):
 #lexi = pd.read_csv("final_lexicon.csv")
 #get_metrics(lexi.Sentiment, lexi.SentimentSimple,"Simple")
 #get_metrics(lexi.Sentiment, lexi.SentimentPolarity,"Polarity")
+
+def freq_dist_tok(strin):
+    token_clear = strin.apply(tok_cln)
+    out = [item for t in token_clear for item in t] 
+    return out

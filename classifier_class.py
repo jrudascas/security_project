@@ -46,7 +46,8 @@ class modelClassification():
                 raise Exception(msg_error)
             try:
                 #preprocesamiento keywords
-                keys=pd.read_excel(keywords_path)
+                # keys=pd.read_excel(keywords_path)
+                keys = pd.read_excel(keywords_path,engine="openpyxl",usecols="A:B").reset_index()
                 keys=list(keys[keys.columns[0]].values)
                 keys=[i.replace('*','').replace('+','') for i in keys]
                 keys=list(pd.Series(keys).apply(clean_text))

@@ -241,12 +241,12 @@ def get_beta(beta_0,particion,left_hand,f_covariados):
         result= minimize(lambda x: np.linalg.norm(to_solve(x,particion,left_hand,f_covariados)),
                         x0=beta_0,
                         method='Powell')
-        print(result.fun)
+        #print(result.fun)
         T_i=np.array([f_covariados(b) for b in particion[1]]).sum(axis=0)
-        print(T_i)
+        #print(T_i)
         result=result.x
         result[T_i == 0] = 0
-        print(np.linalg.norm(to_solve(result,particion,left_hand,f_covariados)))
+        #print(np.linalg.norm(to_solve(result,particion,left_hand,f_covariados)))
         return result
     except:
         msg_error="No se completo operación en la funcion  get_beta"
@@ -267,10 +267,13 @@ def Beta(inicio,time_observed,keys_start_in,Tweets,f_covariados,win_size=1,beta_
     :param beta_0: valor inicial de beta (np.array)
     :return: vector Beta optimo
     """      
+    
     try:
         left_hand=beta_left_hand(keys_start_in,Tweets,f_covariados)
         particion=get_particion(inicio,time_observed,f_covariados,win_size=win_size)
-        return get_beta(beta_0,particion,left_hand,f_covariados)
+        result = get_beta(beta_0,particion,left_hand,f_covariados)
+        error = np.linalg.norm(to_solve(result,particion,left_hand,f_covariados))
+        return result,error
     except Exception as e:
         msg_error="No se completo operación en la funcion  Beta"
         logging.error(msg_error)
@@ -424,11 +427,12 @@ def sigmoid_foll(foll,exp=3):
     :param exp: umbral de normalizacion
     :return: vector seguidores normalizado
     """     
-    #2/(1+np.exp(-10**(-exp)*foll))-1
     try:
         f=foll.copy()
-        f[f>10**exp]=10**exp
-        return f
+        m=10**exp
+        a=2*m
+        # f[f>10**exp]=10**exp
+        return a*(1/(1+np.exp(-2/m*f)))-a/2#f
     except:
         msg_error="No se completo operación en la funcion  sigmoid_foll"
         logging.error(msg_error)
@@ -837,7 +841,6 @@ class modelTweets:
     """    
     def __init__(self, data,
                  train_period,
-                 val_period=None,
                  kernel=lambda x: kernel_zhao_vec(x,s0=300/3600,theta=0.242),
                  kernel_primitive=lambda x: kernel_primitive_zhao_vec(x,s0=300/3600,theta=0.242),
                  kernel_integral=lambda x1,x2: integral_zhao(x1,x2,s0=300/3600,theta=0.242),
@@ -852,7 +855,6 @@ class modelTweets:
                 ):
         logging.debug('Empezo inicialización modelo de Tweets.')
         try:
-            self.data = data
             self.f_inicio = data['Inicio']
             self.Tweets = data['Tweets']
             self.train_period = train_period
@@ -892,24 +894,7 @@ class modelTweets:
             self.t_train=np.linspace(self.train_start,self.train_end,num=int((self.train_end-self.train_start)/self.win_size_train_period))
             self.real_tweets_train=real_tweets(self.keys_train,self.Tweets,self.t_train)
 
-            if val_period != None:
-                self.validate_period = val_period
-                self.validate_start = date_to_hours(val_period[0],self.f_inicio)
-                self.validate_end = date_to_hours(val_period[1],self.f_inicio)
-                keys_validation=[]
-                for i in self.Tweets:
-                    times=self.Tweets[i]['times']
-                    if sum((times >= self.validate_start) & (times < self.validate_end)) > 0:
-                        keys_validation.append(i)
-                self.keys_validation = keys_validation
-                if len(keys_validation)==0:
-                    msg_error="No se encontraron datos en el periodo de validacion establecido"
-                    logging.debug(msg_error)
-                    raise Exception(msg_error)
-                logging.debug('Lista de tweets de validación creado.')
-                self.t_pred=np.linspace(self.validate_start,self.validate_end,num=int((self.validate_end-self.validate_start)/self.win_size_pred_period))
-                self.real_tweets_validate=real_tweets(self.keys_validation,self.Tweets,self.t_pred)
-       
+            
         except Exception as e:
             msg_error = "No se pudo completar con la inicialización del modelo de tweets."
             logging.error(msg_error)
@@ -919,11 +904,11 @@ class modelTweets:
         logging.debug('Empezo operación calculo Beta.')
         try:
             beta_0=np.ones_like(self.f_covariates(0))
-            self.Beta=Beta(self.train_start,self.train_end,
-                            self.keys_train_in,self.Tweets,
-                            self.f_covariates,self.win_size_for_partition_cov,
-                            beta_0
-                            )
+            self.Beta,self.error_Beta=Beta(self.train_start,self.train_end,
+                                           self.keys_train_in,self.Tweets,
+                                           self.f_covariates,self.win_size_for_partition_cov,
+                                           beta_0
+                                           )
             logging.debug('Termino operación calculo Beta.')
             return self.Beta
         except Exception as e:
@@ -1025,15 +1010,14 @@ class modelTweets:
         except:
             print("Error calculo lambda_predict puntual en la clase")
 
-    def compute_lambda_predict(self,dates=None):
+    def compute_lambda_predict(self,dates):
         logging.debug('Empezo calculo lamda en el periodo de predicción.')
         try:
-            if dates == None:
-                t_pred=self.t_pred
-            else:
-                start = date_to_hours(dates[0],self.f_inicio)
-                end = date_to_hours(dates[1],self.f_inicio)   
-                t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+            start = date_to_hours(dates[0],self.f_inicio)
+            end = date_to_hours(dates[1],self.f_inicio)   
+            # t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+            t_pred = np.arange(start,end,self.win_size_pred_period)
+            t_pred= np.concatenate((t_pred,[end]))
 
             self.lambda_predict = lambda_pred(t_pred,
                                               self.keys_train,
@@ -1061,7 +1045,8 @@ class modelTweets:
             logging.error(msg_error)
             raise Exception(msg_error + " / " +str(e))
 
-    def poisson_method(self):
+
+    def poisson_method(self,dates):
         logging.debug('Empezo proceso de predicción metodo de poisson.')
         import statsmodels.api as sm
         try:            
@@ -1070,8 +1055,13 @@ class modelTweets:
             poisson_training_results = sm.GLM(y, X, family=sm.families.Poisson()).fit()
             X_pred=np.array([self.f_covariates(i) for i in self.real_tweets_validate.start])
             poisson_predictions = poisson_training_results.get_prediction(X_pred).summary_frame()['mean'].values
-            dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
-            self.poisson_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':poisson_predictions}) 
+
+            start = date_to_hours(dates[0],self.f_inicio)
+            end = date_to_hours(dates[1],self.f_inicio)   
+            t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+
+            dt=(t_pred[-1]-t_pred[0])/len(t_pred)
+            self.poisson_predictions=pd.DataFrame({'start':t_pred[:-1],'end':t_pred[1:],'Tweets':poisson_predictions}) 
             logging.debug('Termino proceso de predicción metodo de poisson.')
             return self.poisson_predictions
         except:
@@ -1079,16 +1069,21 @@ class modelTweets:
 
     
 
-    def linear_reg_method(self):
+    def linear_reg_method(self,dates):
         logging.debug('Empezo proceso de predicción metodo de regresión lineal.')
         try:
             def to_mini(alpha):
                 return np.sum(times-alpha,axis=0)
 
             from scipy.optimize import leastsq
-            back_g=back_ground(self.Beta,self.t_pred,self.f_covariates)
-            BG_samples=thinning_pred(back_g,self.t_pred,return_samples=True)
-            BG_samples=np.array(count_tweets(BG_samples,self.t_pred))
+
+            start = date_to_hours(dates[0],self.f_inicio)
+            end = date_to_hours(dates[1],self.f_inicio)   
+            t_pred=np.linspace(start,end,num=int((end-start)/self.win_size_pred_period))
+
+            back_g=back_ground(self.Beta,t_pred,self.f_covariates)
+            BG_samples=thinning_pred(back_g,t_pred,return_samples=True)
+            BG_samples=np.array(count_tweets(BG_samples,t_pred))
 
             values=[]
             dist_RT=[]
@@ -1122,20 +1117,17 @@ class modelTweets:
                 if  lim_sup >= len(BG_samples):
                     lim_sup=len(BG_samples)
                 BG_cum[i:lim_sup]+=A[:lim_sup-i]
-            dt=(self.t_pred[-1]-self.t_pred[0])/len(self.t_pred)
-            self.linear_predictions=pd.DataFrame({'start':self.t_pred[:-1],'end':self.t_pred[1:],'Tweets':BG_cum+BG_samples}) 
+            dt=(t_pred[-1]-t_pred[0])/len(t_pred)
+            self.linear_predictions=pd.DataFrame({'start':t_pred[:-1],'end':t_pred[1:],'Tweets':BG_cum+BG_samples}) 
             logging.debug('Termino proceso de predicción metodo de regresión lineal.')
             return self.linear_predictions
         except:
             logging.error('No termino proceso de predicción metodo de regresión lineal.')
     
-    def compute_errors(self,predict=pd.DataFrame(columns=['a'])):
+    def compute_errors(self,real,predict):
         logging.debug('Empezo proceso de calculo errores en predicción.')
         try:
-            if predict.isnull().all().all() == True:
-                predict= self.Tweets_pred
-            ###
-            real=self.real_tweets_validate.Tweets.values
+            real=real.Tweets.values
             predict=predict.Tweets.values
             diff=abs(real-predict)
 
@@ -1176,9 +1168,36 @@ class modelTweets:
             self.infectious_rate_fit()
             self.compute_lambda_train()
             logging.debug('Termino proceso de entrenamiento modelo tweets.')
-            return self.Beta, self.param_infectious_fit, self.error_infectious, self.lambda_train
+            return self.Beta, self.error_Beta,self.param_infectious_fit, self.error_infectious, self.lambda_train
         except Exception as e:
             msg_error = "No se completo operación en la funcion  train en la clase."
+            logging.error(msg_error)
+            raise Exception(msg_error + " / " +str(e))
+
+    def validate(self,valid_period):
+        logging.debug('Empezo proceso de validación modelo tweets.')
+        try:
+            validate_start = date_to_hours(valid_period[0],self.f_inicio)
+            validate_end = date_to_hours(valid_period[1],self.f_inicio)
+            keys_validation=[]
+            for i in self.Tweets:
+                times=self.Tweets[i]['times']
+                if sum((times >= validate_start) & (times < validate_end)) > 0:
+                    keys_validation.append(i)
+            if len(keys_validation)==0:
+                msg_error="No se encontraron datos en el periodo de validacion establecido"
+                logging.debug(msg_error)
+                raise Exception(msg_error)
+            logging.debug('Lista de tweets de validación creado.')
+            t_pred=np.linspace(validate_start,validate_end,num=int((validate_end-validate_start)/self.win_size_pred_period))
+            real_tweets_validate=real_tweets(keys_validation,self.Tweets,t_pred)
+            predict_tweets=self.compute_lambda_predict(valid_period)[1]
+            errors,errors_cum=self.compute_errors(real_tweets_validate,predict_tweets)
+            logging.debug('Termino proceso de validación modelo tweets.')
+            return errors,errors_cum
+
+        except Exception as e:
+            msg_error = "No se completo operación en la funcion  validate en la clase."
             logging.error(msg_error)
             raise Exception(msg_error + " / " +str(e))
 
