@@ -9,7 +9,7 @@ from utilis import get_data_from_postgress, spark_to_pandas
 
 def info_data(data,column_date):
     data_=data.copy()
-    data_[column_date]=pd.to_datetime(data_[column_date])-timedelta(hours=6)
+    data_[column_date]=pd.to_datetime(data_[column_date])
     min_,max_=data_[column_date].min(),data_[column_date].max()
     return str(min_),str(max_)
 
@@ -284,13 +284,6 @@ def process(log_file,
             generalmodel.predict_model(predict_period,save_result_predict)
 
         if subprocess == "validate":
-            if generalmodel.win_size_pred_period != win_size_pred_period:
-                generalmodel.win_size_pred_period = win_size_pred_period
-                generalmodel.tweets_model.win_size_pred_period = win_size_pred_period
-
-            if generalmodel.method_pred != method_pred:
-                generalmodel.method_pred = method_pred
-                generalmodel.tweets_model.method_pred = method_pred
 
             if valid_period != None:
                 valid_period=tuple(valid_period.split(","))

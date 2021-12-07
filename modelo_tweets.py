@@ -1191,7 +1191,9 @@ class modelTweets:
                 logging.debug(msg_error)
                 raise Exception(msg_error)
             logging.debug('Lista de tweets de validación creado.')
-            t_pred=np.linspace(validate_start,validate_end,num=int((validate_end-validate_start)/self.win_size_pred_period))
+            t_pred = np.arange(validate_start,validate_end,self.win_size_pred_period)
+            t_pred= np.concatenate((t_pred,[validate_end]))
+            #t_pred=np.linspace(validate_start,validate_end,num=int((validate_end-validate_start)/self.win_size_pred_period))
             real_tweets_validate=real_tweets(keys_validation,self.Tweets,t_pred)
             predict_tweets=self.compute_lambda_predict(valid_period)[1]
             errors,errors_cum=self.compute_errors(real_tweets_validate,predict_tweets)

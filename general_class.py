@@ -163,7 +163,7 @@ class modelPercepcion(modeloBase):
         try:
             if hasattr(self,"tweets_model"):
                 
-                last={'Inicio':self.tweets_model.f_inicio,'Tweets':self.tweets_model.Tweets}
+                last={'Inicio':self.tweets_model.f_inicio,'Tweets':self.tweets_model.Tweets.copy()}
                 if last['Inicio'] < self.f_limite:
                     diff=(self.f_limite-last['Inicio']).total_seconds()/3600
                     last['Inicio']=self.f_limite
@@ -186,12 +186,11 @@ class modelPercepcion(modeloBase):
                 for t in last['Tweets']:
                     new['Tweets'][t] = last['Tweets'][t]
                     if t in data['Tweets']:
+                        foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
+                        foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
                         new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
                         (new['Tweets'][t]["times"]).sort()
                         to_drop_new.append(t)
-
-                        foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
-                        foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
 
                         R={}
                         for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):

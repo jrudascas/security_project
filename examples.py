@@ -48,19 +48,20 @@ def example3():
               "--subprocess 'predict' " +
             #   "--predict_period '2019-03-21 00:00:00,2019-03-23 00:00:00' " +
               "--predict_period '2020-04-28 00:00:00,2020-05-05 00:00:00' " +
-              "--save_result_predict "+os.path.join(examples_path,"predict.csv") +" " +
-              "--win_size_pred_period 1"
+              "--save_result_predict "+os.path.join(examples_path,"predict1.csv") +" " +
+              "--win_size_pred_period 12"
               )
 
 def example4():
     print("Ejemplo para realizar validación de un modelo preentrenado ")
     os.system("python process.py " +
               "--log_file "+os.path.join(examples_path,"examples_log.log") +" "+
-              "--summary_file "+os.path.join(examples_path,"example_summ_validation.log") +" "+
+              "--summary_file "+os.path.join(examples_path,"example_summ_validation1.log") +" "+
               "--exist_model_path "+os.path.join(examples_path,"modelPoS.pkl") +" "+ 
               "--save_model "+os.path.join(examples_path,"modelPoS.pkl") +" "+
               "--subprocess 'validate' " +
               "--valid_period '2020-03-10 00:00:00,2020-03-20 00:00:00' "
+            # "--valid_period '2019-03-19 00:00:00,2019-03-20 00:00:00' "
               )
 
 def example5():
@@ -75,6 +76,7 @@ def example5():
               "--save_freq_palabras "+os.path.join(examples_path,"example_words1.csv") +" "+          
               "--save_real_scores "+os.path.join(examples_path,"example_scores1.csv") +" "+
               "--f_limite '2019-10-28 00:00:00' "
+            #   "--f_limite '2019-03-19 00:00:00' "
               )
 
 def example6():
