@@ -138,7 +138,7 @@ def spark_to_pandas(df,
     :return: pandas dataframe con los datos descargados
     """
     try:
-        logging.debug("Empezo proceso incial de datos descargados desde base de datos postgress")
+        logging.debug("Empezo proceso inicial de datos descargados desde base de datos postgress")
         date_c = c.DATE_COLUMN
         if tipe == "cov":
             date_c = "FECHA"
@@ -147,12 +147,14 @@ def spark_to_pandas(df,
         df=df.withColumn(date_c,functions.to_timestamp(date_c,'yyyy-MM-dd HH:mm:ss.SSS'))
         logging.debug('Conversión fechas a formato datetime.')
         if tipe == "tweets":
-            df = df.withColumn(c.DATE_COLUMN, functions.col(c.DATE_COLUMN) - functions.expr('INTERVAL 5 HOURS'))
+            df = df.withColumn(date_c, functions.to_utc_timestamp(date_c,"+05:00"))
         if start_data != None:
             df=df.filter(date_c+" > date'"+start_data+"'")
 
 
         df=df.toPandas()
+        if start_data != None:
+            df=df[df[date_c]>start_data]
         if tipe == "tweets":
             duplicates = df.duplicated().sum()
             if summary != None:
@@ -172,7 +174,7 @@ def spark_to_pandas(df,
             df[c.RT_COLUMN]=df[c.IDFROM_COLUMNN].apply(colum_rt)
             
         logging.debug("Termino proceso incial de datos descargados desde base de datos postgress")
-        return df
+        return df.head(100)
     except:
         msg_error="No se completo la conversion de los datos descargados"
         logging.debug(msg_error)
