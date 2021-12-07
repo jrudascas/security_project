@@ -211,6 +211,11 @@ def process(log_file,
             else:
                 generalmodel.f_limite = datetime.fromisoformat(str(f_limite))
                 train_period=(f_limite,end)
+            
+            generalmodel.train_period = train_period
+            if hasattr(generalmodel,"tweets_model"):
+                    generalmodel.tweets_model.train_period = train_period
+
             summary.write("Periodo de entrenamiento: " +str(train_period) + "\n")
             tweets_score,info,palabras,real_info=generalmodel.prepare_data(data,new_data=True)
             summary.write("Cantidad tweets originales que pasaron el clasificador: " +str(len(info['Tweets'])) + "\n")

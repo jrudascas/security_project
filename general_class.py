@@ -189,6 +189,19 @@ class modelPercepcion(modeloBase):
                         new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
                         (new['Tweets'][t]["times"]).sort()
                         to_drop_new.append(t)
+
+                        foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
+                        foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
+
+                        R={}
+                        for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):
+                            if i in foll_rel_last:
+                                R[i]=foll_rel_last[i]
+                            if i in foll_rel_data:
+                                R[i]=foll_rel_data[i]
+
+                        new['Tweets'][t]["followers"]=np.array([R[i] for i in new['Tweets'][t]["times"]])
+                        
                 for i in to_drop_new:
                     data["Tweets"].pop(i)
 

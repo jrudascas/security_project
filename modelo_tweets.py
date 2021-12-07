@@ -924,7 +924,9 @@ class modelTweets:
                                        self.keys_train,
                                        self.Tweets,
                                        self.kernel_integral,
-                                       self.followers_rate)
+                                       self.followers_rate,
+                                       self.win_size_infectious_rate
+                                       )
             logging.debug('Termino operación calculo estimación de intensidades.')
             return self.p_est
         except Exception as e:

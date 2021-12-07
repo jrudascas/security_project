@@ -49,7 +49,7 @@ def example3():
             #   "--predict_period '2019-03-21 00:00:00,2019-03-23 00:00:00' " +
               "--predict_period '2020-04-28 00:00:00,2020-05-05 00:00:00' " +
               "--save_result_predict "+os.path.join(examples_path,"predict.csv") +" " +
-              "--win_size_pred_period 8.5"
+              "--win_size_pred_period 1"
               )
 
 def example4():
@@ -74,25 +74,41 @@ def example5():
               "--exist_model_path "+os.path.join(examples_path,"modelPoS.pkl") +" "+ 
               "--save_freq_palabras "+os.path.join(examples_path,"example_words1.csv") +" "+          
               "--save_real_scores "+os.path.join(examples_path,"example_scores1.csv") +" "+
-              "--f_limite '2019-03-19 00:00:00' "
+              "--f_limite '2019-10-28 00:00:00' "
               )
-                  
 
-# start = timeit.default_timer()
-# example1()
-# clean = timeit.default_timer()
-# example2()
-# train = timeit.default_timer()
+def example6():
+    print("Ejemplo cambio parametros de entrenamiento "
+          )
+    os.system("python process.py " +
+              "--log_file "+os.path.join(examples_path,"examples_log.log") +" "+
+              "--summary_file "+os.path.join(examples_path,"example_change_train.log") +" "+
+              "--save_model "+os.path.join(examples_path,"modelPoS.pkl") +" "+
+              "--subprocess 'train' " +
+              "--exist_model_path "+os.path.join(examples_path,"modelPoS.pkl") +" "+ 
+              "--win_size_for_partition_cov 12.5" +" "+ 
+              "--followers_rate 4" +" "+ 
+              "--win_size_infectious_rate 6" +" "+ 
+              "--win_size_train_period 12" +" "
+              )                  
+
+start = timeit.default_timer()
+example1()
+clean = timeit.default_timer()
+example2()
+train = timeit.default_timer()
 example3()
-# predict = timeit.default_timer()
-# example4()
-# validate = timeit.default_timer()
-# example5()
-# download = timeit.default_timer()
+predict = timeit.default_timer()
+example4()
+validate = timeit.default_timer()
+example5()
+download = timeit.default_timer()
+example6()
+changing = timeit.default_timer()
 
-
-# print('Time clean: ', clean - start)  
-# print('Time train: ', train - clean)  
-# print('Time predict: ', predict - train)  
-# print('Time validation: ', validate - predict)  
-# print('Time dowload: ', download - validate)  
+print('Time clean: ', clean - start)  
+print('Time train: ', train - clean)  
+print('Time predict: ', predict - train)  
+print('Time validation: ', validate - predict)  
+print('Time dowload: ', download - validate)  
+print('Time changing parameters: ', changing - download)  
