@@ -177,37 +177,39 @@ class modelPercepcion(modeloBase):
                         last["Tweets"].pop(i)
 
                 logging.debug('Depuración tweets anteriores a la fecha limite.')   
+                if len(data)!=0:
+                    new={}         
+                    new['Inicio'] = last['Inicio']
+                    new['Tweets']={}
+                    diff=(new['Inicio']-data['Inicio']).total_seconds()/3600
+                    to_drop_new=[]
+                    for t in last['Tweets']:
+                        new['Tweets'][t] = last['Tweets'][t]
+                        if t in data['Tweets']:
+                            foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
+                            foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
+                            new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
+                            (new['Tweets'][t]["times"]).sort()
+                            to_drop_new.append(t)
 
-                new={}         
-                new['Inicio'] = last['Inicio']
-                new['Tweets']={}
-                diff=(new['Inicio']-data['Inicio']).total_seconds()/3600
-                to_drop_new=[]
-                for t in last['Tweets']:
-                    new['Tweets'][t] = last['Tweets'][t]
-                    if t in data['Tweets']:
-                        foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
-                        foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
-                        new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
-                        (new['Tweets'][t]["times"]).sort()
-                        to_drop_new.append(t)
+                            R={}
+                            for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):
+                                if i in foll_rel_last:
+                                    R[i]=foll_rel_last[i]
+                                if i in foll_rel_data:
+                                    R[i]=foll_rel_data[i]
 
-                        R={}
-                        for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):
-                            if i in foll_rel_last:
-                                R[i]=foll_rel_last[i]
-                            if i in foll_rel_data:
-                                R[i]=foll_rel_data[i]
+                            new['Tweets'][t]["followers"]=np.array([R[i] for i in new['Tweets'][t]["times"]])
+                            
+                    for i in to_drop_new:
+                        data["Tweets"].pop(i)
 
-                        new['Tweets'][t]["followers"]=np.array([R[i] for i in new['Tweets'][t]["times"]])
-                        
-                for i in to_drop_new:
-                    data["Tweets"].pop(i)
-
-                for t in data["Tweets"]:
-                    new['Tweets'][t] = data['Tweets'][t]
-                    new['Tweets'][t]["times"]=new['Tweets'][t]["times"]+diff
-                logging.debug('Adición tweets nuevos a los datos existentes.')   
+                    for t in data["Tweets"]:
+                        new['Tweets'][t] = data['Tweets'][t]
+                        new['Tweets'][t]["times"]=new['Tweets'][t]["times"]+diff
+                    logging.debug('Adición tweets nuevos a los datos existentes.')   
+                else:
+                    new=last.copy()
             else:
                 new=data
 

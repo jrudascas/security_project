@@ -202,8 +202,12 @@ def process(log_file,
             last_train_period=generalmodel.tweets_model.train_period
             # nueva tanda de datos desde last_train_period[1]
             data=spark_to_pandas(get_data_from_postgress(),last_train_period[1],summary=summary)
-            
-            _,end=info_data(data,date_column)
+
+            if len(data) != 0:
+                _,end=info_data(data,date_column)
+            else:
+                logging.debug('No se encontraron nuevos datos en la descarga.')
+                end=last_train_period[1]
 
             
             if f_limite == None:
@@ -217,18 +221,21 @@ def process(log_file,
                     generalmodel.tweets_model.train_period = train_period
 
             summary.write("Periodo de entrenamiento: " +str(train_period) + "\n")
-            tweets_score,info,palabras,real_info=generalmodel.prepare_data(data,new_data=True)
-            summary.write("Cantidad tweets originales que pasaron el clasificador: " +str(len(info['Tweets'])) + "\n")
-            try:
-                palabras.to_csv(save_freq_palabras,index=False)
-                logging.debug('Guardado exitosamente tabla frecuencia palabras.')
-                tweets_score.to_csv(save_real_scores,index=False)
-                base=os.path.basename(save_real_scores)
-                real_info.to_csv(save_real_scores[:-len(base)]+'stats_'+base,index=False) 
-                logging.debug('Guardado exitosamente tabla scores tweets reales.')
-            except:
-                logging.debug('No se pudo guardar tabla frecuencia palabras.')
-                logging.debug('No se pudo guardar tabla scores tweets reales.')
+            if len(data) != 0:
+                tweets_score,info,palabras,real_info=generalmodel.prepare_data(data,new_data=True)
+                summary.write("Cantidad tweets originales que pasaron el clasificador: " +str(len(info['Tweets'])) + "\n")
+                try:
+                    palabras.to_csv(save_freq_palabras,index=False)
+                    logging.debug('Guardado exitosamente tabla frecuencia palabras.')
+                    tweets_score.to_csv(save_real_scores,index=False)
+                    base=os.path.basename(save_real_scores)
+                    real_info.to_csv(save_real_scores[:-len(base)]+'stats_'+base,index=False) 
+                    logging.debug('Guardado exitosamente tabla scores tweets reales.')
+                except:
+                    logging.debug('No se pudo guardar tabla frecuencia palabras.')
+                    logging.debug('No se pudo guardar tabla scores tweets reales.')
+            else:
+                info={}
             generalmodel.create_model_tweets(info)
 
         if subprocess == "train":
