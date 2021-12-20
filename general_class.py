@@ -117,7 +117,12 @@ class modelPercepcion(modeloBase):
 
             palabras=pd.DataFrame(FreqDist(freq_dist_tok(preprocessing(tweets_score[TEXT_COLUMN]))).items(), columns=['Palabras', 'Frecuencia']).sort_values("Frecuencia",ascending=False)
 
+            short=palabras[[len(i)<3 for i in palabras.Palabras.values]]
+            palabras=palabras[~palabras.index.isin(short.index)]
+
             real_info=tweets_score.groupby([tweets_score[DATE_COLUMN].dt.date]).agg({TWEETID_COLUMN:['count'],SCORE_COLUMN:['mean','std']}).reset_index()
+
+            real_info=pd.DataFrame(real_info.values,columns=[DATE_COLUMN,"cantidad",SCORE_COLUMN+"_mean",SCORE_COLUMN+"_std"])
             
 
             Orig_id=tweets_score[tweets_score[self.RT_column] == 0][self.TweetId_column].values
@@ -269,7 +274,9 @@ class modelPercepcion(modeloBase):
             logging.debug('Guardando resultado de predicción.')
             if save_path != None:
                 try:
-                    self.tweets_model.Tweets_pred.to_csv(save_path,index=False)
+                    predict=self.tweets_model.Tweets_pred.copy()
+                    predict["Tweets"]=predict["Tweets"].round().astype(int)
+                    predict.to_csv(save_path,index=False)
                     logging.debug('Guardado exitosamente resultado de predicción.')
                     update_process_state(self.tipos_proceso[NAME_PREDICCION], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
 
