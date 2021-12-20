@@ -21,7 +21,7 @@ class modelClassification():
     :param vectors_path: direccion del archivo de transformacion de palabras a vectores
     :param text_column: nombre columna del dataframe que contine los textos
     :param model_path: direccion del modelo de clasificacion (leer y escribir)
-    :param predict_column: nombre de la columna del dataframe que identidica la clase de cada texto
+    :param predict_column: nombre de la columna del dataframe que identifica la clase de cada texto
     :param data_to_train: dataframe de pandas utilizado para entrenar el modelo
     :param percent_val_data: porcentaje del dataframe de entrenamiento utilizado para la validacion
     """    

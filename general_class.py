@@ -117,7 +117,12 @@ class modelPercepcion(modeloBase):
 
             palabras=pd.DataFrame(FreqDist(freq_dist_tok(preprocessing(tweets_score[TEXT_COLUMN]))).items(), columns=['Palabras', 'Frecuencia']).sort_values("Frecuencia",ascending=False)
 
+            short=palabras[[len(i)<3 for i in palabras.Palabras.values]]
+            palabras=palabras[~palabras.index.isin(short.index)]
+
             real_info=tweets_score.groupby([tweets_score[DATE_COLUMN].dt.date]).agg({TWEETID_COLUMN:['count'],SCORE_COLUMN:['mean','std']}).reset_index()
+
+            real_info=pd.DataFrame(real_info.values,columns=[DATE_COLUMN,"cantidad",SCORE_COLUMN+"_mean",SCORE_COLUMN+"_std"])
             
 
             Orig_id=tweets_score[tweets_score[self.RT_column] == 0][self.TweetId_column].values
@@ -177,37 +182,39 @@ class modelPercepcion(modeloBase):
                         last["Tweets"].pop(i)
 
                 logging.debug('Depuración tweets anteriores a la fecha limite.')   
+                if len(data)!=0:
+                    new={}         
+                    new['Inicio'] = last['Inicio']
+                    new['Tweets']={}
+                    diff=(new['Inicio']-data['Inicio']).total_seconds()/3600
+                    to_drop_new=[]
+                    for t in last['Tweets']:
+                        new['Tweets'][t] = last['Tweets'][t]
+                        if t in data['Tweets']:
+                            foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
+                            foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
+                            new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
+                            (new['Tweets'][t]["times"]).sort()
+                            to_drop_new.append(t)
 
-                new={}         
-                new['Inicio'] = last['Inicio']
-                new['Tweets']={}
-                diff=(new['Inicio']-data['Inicio']).total_seconds()/3600
-                to_drop_new=[]
-                for t in last['Tweets']:
-                    new['Tweets'][t] = last['Tweets'][t]
-                    if t in data['Tweets']:
-                        foll_rel_last={x:y for x,y in zip(last["Tweets"][t]["times"],last["Tweets"][t]["followers"])}
-                        foll_rel_data={x:y for x,y in zip(data["Tweets"][t]["times"],data["Tweets"][t]["followers"])}
-                        new['Tweets'][t]["times"]=np.unique(np.concatenate((new['Tweets'][t]["times"],diff+data['Tweets'][t]["times"])))
-                        (new['Tweets'][t]["times"]).sort()
-                        to_drop_new.append(t)
+                            R={}
+                            for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):
+                                if i in foll_rel_last:
+                                    R[i]=foll_rel_last[i]
+                                if i in foll_rel_data:
+                                    R[i]=foll_rel_data[i]
 
-                        R={}
-                        for i in list(foll_rel_last.keys())+list(foll_rel_data.keys()):
-                            if i in foll_rel_last:
-                                R[i]=foll_rel_last[i]
-                            if i in foll_rel_data:
-                                R[i]=foll_rel_data[i]
+                            new['Tweets'][t]["followers"]=np.array([R[i] for i in new['Tweets'][t]["times"]])
+                            
+                    for i in to_drop_new:
+                        data["Tweets"].pop(i)
 
-                        new['Tweets'][t]["followers"]=np.array([R[i] for i in new['Tweets'][t]["times"]])
-                        
-                for i in to_drop_new:
-                    data["Tweets"].pop(i)
-
-                for t in data["Tweets"]:
-                    new['Tweets'][t] = data['Tweets'][t]
-                    new['Tweets'][t]["times"]=new['Tweets'][t]["times"]+diff
-                logging.debug('Adición tweets nuevos a los datos existentes.')   
+                    for t in data["Tweets"]:
+                        new['Tweets'][t] = data['Tweets'][t]
+                        new['Tweets'][t]["times"]=new['Tweets'][t]["times"]+diff
+                    logging.debug('Adición tweets nuevos a los datos existentes.')   
+                else:
+                    new=last.copy()
             else:
                 new=data
 
@@ -267,7 +274,9 @@ class modelPercepcion(modeloBase):
             logging.debug('Guardando resultado de predicción.')
             if save_path != None:
                 try:
-                    self.tweets_model.Tweets_pred.to_csv(save_path,index=False)
+                    predict=self.tweets_model.Tweets_pred.copy()
+                    predict["Tweets"]=predict["Tweets"].round().astype(int)
+                    predict.to_csv(save_path,index=False)
                     logging.debug('Guardado exitosamente resultado de predicción.')
                     update_process_state(self.tipos_proceso[NAME_PREDICCION], self.estados_ejecucion[ESTADO_EXITO], get_token_acces())
 
